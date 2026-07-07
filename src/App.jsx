@@ -1,9 +1,9 @@
-// v4.0 última MODAL — SELIC + Atualização de Débito (penhora e prisão civil)
-import { useState, useRef } from "react";
+// v5.0 APIDEP — SELIC + Atualização de Débito (penhora e prisão civil)
+import { useState } from "react";
 import { jsPDF } from "jspdf";
 
 var C = {
-  verde: "#1a6b3a", verdeClaro: "#2d8a50", verdePale: "#e8f5ee",
+  verde: "#00453a", verdeClaro: "#62a72a", verdePale: "#e9f3ee",
   cinza: "#4a4a4a", cinzaClaro: "#f5f5f5", branco: "#ffffff",
   borda: "#d0d0d0", vermelho: "#c0392b", azul: "#1a5276",
   laranja: "#c0580a",
@@ -217,72 +217,25 @@ var MESES = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
 ];
 
-var DEFENSORES = {
-  "Dr. Robert Rios Júnior": { lotacao: "2ª Defensoria Itinerante", hash: "2099334c0f01fbcad414ea14a4eb1f58e73e630e4d14f59350058b4fa64aae35" },
-  "Dra. Andrea Melo de Carvalho": { lotacao: "1ª Defensoria de Família", hash: "f86e15eea800eb88663a9a25b15f8cd8df0be4d32aba60c6d9a8833777bf1811" },
-  "Dra. Dayana Sampaio Mendes Magalhães": { lotacao: "2ª Defensoria Pública Regional de Altos", hash: "1422d2bf814991c7f50c829f3c1648daa94489627f38c5c04fa6a0f671193bac" },
-  "Dr. Eric Leonardo Pires de Melo": { lotacao: "7ª Defensoria de Família", hash: "dd62878a0e4708754eef00caeefe6cc4319101de2c37c69c252df4d96006b52b" },
-  "Dr. Jeiko Leal Melo Hohmann Brito": { lotacao: "13ª Defensoria de Família", hash: "3aa826691989016c9147e63e0bf436674a188ac8395445cf72e55c23d588304b" },
-  "Dr. João Batista Viana do Lago Neto": { lotacao: "10ª Defensoria de Família", hash: "255a71c355427f07269fd1db4a2b0170f886c2ffece4ce69b8a1508e2a985cd0" },
-  "Dr. João Castelo Branco de Vasconcelos Neto": { lotacao: "3ª Defensoria de Família", hash: "255a71c355427f07269fd1db4a2b0170f886c2ffece4ce69b8a1508e2a985cd0" },
-  "Dra. Lívia de Oliveira Revorêado": { lotacao: "3ª Defensoria Pública Regional de São Raimundo Nonato", hash: "db288d54338cfd0a9634de0d606dd689840f2391692cd94a1385ad4732e6f416" },
-  "Dr. Marcos Martins de Oliveira": { lotacao: "2ª Defensoria de Floriano", hash: "b3f209068b16d6ef42bad418f61a57c4eba0bbdef1577e0d6a8087fd04204c2e" },
-  "Dra. Priscila Gimenes do Nascimento Godoi": { lotacao: "2ª Defensoria Pública Regional de União", hash: "cd9f8f51a672df0ea5d424f0ca3ee456756876f5b09701cdb27368d70fde7a8a" },
-  "Dr. Silvio César Queiroz Costa": { lotacao: "4ª Defensoria de Família", hash: "a32c57d8af08825cd502a096ea26f4cbd9308a71c6c9610542d5ce8ca37e7fd2" },
-  "Dra. Wênia Silva Moura": { lotacao: "3ª Defensoria Pública Regional de Campo Maior", hash: "6d24af7c3d24d6a4435be0a49da22a7a21028e61931e416f66cda769e3174ccb" },
-  "Dra. Julyanne Cristine Douglas Leone": { lotacao: "Assessora — 2ª Defensoria Itinerante", hash: "329b260b07910ba3416b06ca0b72322137a50f854f447143ab272bdc8666b653" },
-  "Dra. Giulia Mazza": { lotacao: "Assessora — 2ª Defensoria Regional de Piripiri", hash: "db43e6823ff7207d950275d6b7b6997c0e001f6a9adb42fef828c2147d2b4a29" }
-};
-
-async function hashSenha(senha) {
-  var encoder = new TextEncoder();
-  var data = encoder.encode(senha);
-  var hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  var hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(function(b){ return b.toString(16).padStart(2, '0'); }).join('');
-}
-
-
-
 var _logoB64 = null;
-var _logoRatio = 4.0;
+var _logoRatio = 836 / 246;
 
-function renderizarLogoComFundo(b64, bgColor) {
-  return new Promise(function(res) {
-    var img = new Image();
-    img.onload = function() {
-      try {
-        var cv = document.createElement("canvas");
-        cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-        var ctx = cv.getContext("2d");
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, cv.width, cv.height);
-        ctx.drawImage(img, 0, 0);
-        _logoRatio = img.naturalWidth / img.naturalHeight;
-        res(cv.toDataURL("image/png"));
-      } catch(e) { res(b64); }
-    };
-    img.onerror = function() { res(b64); };
-    img.src = b64;
-  });
-}
-
-var _logoCache = {};
-
-function carregarLogo(bgColor) {
-  var cor = bgColor || "#1a6b3a";
-  if (_logoCache[cor]) return Promise.resolve(_logoCache[cor]);
+function carregarLogo() {
+  if (_logoB64) return Promise.resolve(_logoB64);
   return fetch("/logo-apidep.png")
     .then(function(r) { return r.blob(); })
     .then(function(blob) {
       return new Promise(function(res) {
         var reader = new FileReader();
         reader.onload = function() {
-          renderizarLogoComFundo(reader.result, cor).then(function(b64final) {
-            _logoCache[cor] = b64final;
-            if (!_logoB64) _logoB64 = b64final;
-            res(b64final);
-          });
+          var img = new Image();
+          img.onload = function() {
+            _logoRatio = img.naturalWidth / img.naturalHeight;
+            _logoB64 = reader.result;
+            res(_logoB64);
+          };
+          img.onerror = function() { _logoB64 = reader.result; res(_logoB64); };
+          img.src = reader.result;
         };
         reader.onerror = function() { res(null); };
         reader.readAsDataURL(blob);
@@ -291,100 +244,58 @@ function carregarLogo(bgColor) {
     .catch(function() { return null; });
 }
 
-// ===================== MODAL DE ACESSO RESTRITO =====================
-
-function ModalAcesso(props) {
-  if (!props.visivel) return null;
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.60)",
-      zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center"
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 18, padding: "40px 44px 36px",
-        width: 400, maxWidth: "90vw", textAlign: "center",
-        boxShadow: "0 16px 56px rgba(0,0,0,0.30)"
-      }}>
-        <img
-          src="/figurinha.png"
-          alt="ACESSO RESTRITO"
-          style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 22 }}
-          onError={function(e){ e.target.style.display = "none"; }}
-        />
-        <div style={{ fontWeight: 800, fontSize: 18, color: C.verde, marginBottom: 10 }}>
-          {"VOCÊ NÃO TEM PIX !!!"}
-        </div>
-        <div style={{ fontSize: 14, color: C.cinza, lineHeight: 1.7, marginBottom: 28 }}>
-          {"Essa calculadora é somente para defensores legais."}
-        </div>
-        <button
-          onClick={props.onClose}
-          style={{
-            background: C.verde, color: "#fff", border: "none",
-            borderRadius: 8, padding: "11px 36px",
-            fontSize: 15, fontWeight: 700, cursor: "pointer",
-            width: "100%"
-          }}>
-          {"BYE BYE"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ===================== COMPONENTES BASE =====================
 
 function TelaLogin(props) {
   var _s1 = useState(""); var nome = _s1[0]; var setNome = _s1[1];
-  var _s2 = useState(""); var senha = _s2[0]; var setSenha = _s2[1];
+  var _s2 = useState(""); var defensoria = _s2[0]; var setDefensoria = _s2[1];
   var _s3 = useState(""); var erro = _s3[0]; var setErro = _s3[1];
-  var tentar = async function() {
-    var def = DEFENSORES[nome];
-    if (!nome || !def) { setErro("Selecione um defensor."); return; }
-    var h = await hashSenha(senha);
-    if (h !== def.hash) { setErro("Senha incorreta."); return; }
-    props.onLogin({ nome: nome, lotacao: def.lotacao, autenticado: true });
+  var entrar = function() {
+    if (!nome.trim()) { setErro("Informe o nome completo do Defensor."); return; }
+    if (!defensoria.trim()) { setErro("Informe o nome da Defensoria."); return; }
+    props.onLogin({ nome: capitalizarNome(nome.trim()), lotacao: capitalizarNome(defensoria.trim()) });
   };
   return (
-    <div style={{ minHeight:"100vh", background:"#f0f2f0", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ background:"#fff", borderRadius:12, padding:40, width:400, boxShadow:"0 8px 32px rgba(0,0,0,0.15)" }}>
-        <div style={{ textAlign:"center", marginBottom:28 }}>
-          <img src="/logo-apidep.png" alt="DEFCALC"
-            style={{ height:60, objectFit:"contain", marginBottom:12 }}
+    <div style={{ minHeight:"100vh", background:"linear-gradient(160deg, #00453a 0%, #00594a 55%, #062f28 100%)", display:"flex", alignItems:"center", justifyContent:"center", padding:16, fontFamily:"Segoe UI, Arial, sans-serif" }}>
+      <div style={{ background:"#fff", borderRadius:16, width:440, maxWidth:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.35)", overflow:"hidden" }}>
+        <div style={{ background:C.verde, padding:"26px 32px 22px", textAlign:"center" }}>
+          <img src="/logo-apidep.png" alt="APIDEP"
+            style={{ width:"78%", maxWidth:300, objectFit:"contain", display:"block", margin:"0 auto" }}
             onError={function(e){e.target.style.display="none";}} />
-          <div style={{ fontWeight:800, fontSize:16, color:C.verde }}>{"Calculadora de Débitos Alimentares"}</div>
-          <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{"Fase teste — Apenas Defensores Legais"}</div>
         </div>
-        <div style={{ marginBottom:14 }}>
-          <label style={{ display:"block", fontWeight:600, marginBottom:6, fontSize:13, color:C.cinza }}>{"Nome do Defensor"}</label>
-          <select value={nome} onChange={function(e){setNome(e.target.value);}}
-            style={{ width:"100%", padding:"10px 12px", borderRadius:6, border:"1px solid #d0d0d0", fontSize:14, boxSizing:"border-box" }}>
-            <option value="">{"-- Selecione --"}</option>
-            {Object.keys(DEFENSORES).map(function(d,i){ return <option key={i} value={d}>{d}</option>; })}
-          </select>
-          {nome && DEFENSORES[nome] && (
-            <div style={{ fontSize:12, color:C.verde, marginTop:4, paddingLeft:4 }}>{"» "}{DEFENSORES[nome].lotacao}</div>
+        <div style={{ height:4, background:C.verdeClaro }} />
+        <div style={{ padding:"28px 36px 34px" }}>
+          <div style={{ textAlign:"center", marginBottom:24 }}>
+            <div style={{ fontWeight:800, fontSize:17, color:C.verde }}>{"Calculadora de Débitos Alimentares"}</div>
+            <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{"Identifique-se para constar nos memoriais de cálculo"}</div>
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontWeight:600, marginBottom:6, fontSize:13, color:C.cinza }}>{"Nome Completo do Defensor"}</label>
+            <input type="text" value={nome}
+              onChange={function(e){setNome(capitalizarNome(e.target.value));setErro("");}}
+              onKeyDown={function(e){if(e.key==="Enter")entrar();}}
+              placeholder={"Ex.: Robert Rios Magalhães Júnior"}
+              style={{ width:"100%", padding:"11px 14px", borderRadius:8, border:"1px solid "+C.borda, fontSize:14, boxSizing:"border-box" }} />
+          </div>
+          <div style={{ marginBottom:20 }}>
+            <label style={{ display:"block", fontWeight:600, marginBottom:6, fontSize:13, color:C.cinza }}>{"Nome da Defensoria"}</label>
+            <input type="text" value={defensoria}
+              onChange={function(e){setDefensoria(capitalizarNome(e.target.value));setErro("");}}
+              onKeyDown={function(e){if(e.key==="Enter")entrar();}}
+              placeholder={"Ex.: 2ª Defensoria Itinerante"}
+              style={{ width:"100%", padding:"11px 14px", borderRadius:8, border:"1px solid "+C.borda, fontSize:14, boxSizing:"border-box" }} />
+          </div>
+          {erro && (
+            <div style={{ background:"#fdecea", border:"1px solid #e57373", borderRadius:6, padding:"10px 12px", fontSize:12, color:C.vermelho, marginBottom:16 }}>{erro}</div>
           )}
+          <button onClick={entrar}
+            style={{ width:"100%", background:C.verde, color:"#fff", border:"none", borderRadius:8, padding:13, fontSize:15, fontWeight:700, cursor:"pointer" }}>
+            {"Acessar a Calculadora"}
+          </button>
+          <div style={{ textAlign:"center", fontSize:11, color:"#aaa", marginTop:16 }}>
+            {"APIDEP — Associação Piauiense das Defensoras e dos Defensores Públicos"}
+          </div>
         </div>
-        <div style={{ marginBottom:20 }}>
-          <label style={{ display:"block", fontWeight:600, marginBottom:6, fontSize:13, color:C.cinza }}>{"Senha de Acesso"}</label>
-          <input type="password" value={senha}
-            onChange={function(e){setSenha(e.target.value);}}
-            onKeyDown={function(e){if(e.key==="Enter")tentar();}}
-            placeholder={"Digite a senha"}
-            style={{ width:"100%", padding:"10px 12px", borderRadius:6, border:"1px solid #d0d0d0", fontSize:14, boxSizing:"border-box" }} />
-        </div>
-        {erro && (
-          <div style={{ background:"#fdecea", border:"1px solid #e57373", borderRadius:6, padding:"10px 12px", fontSize:12, color:C.vermelho, marginBottom:16 }}>{erro}</div>
-        )}
-        <button onClick={tentar}
-          style={{ width:"100%", background:C.verde, color:"#fff", border:"none", borderRadius:6, padding:12, fontSize:15, fontWeight:700, cursor:"pointer", marginBottom:10 }}>
-          {"Entrar"}
-        </button>
-        <button onClick={props.onVisitante}
-          style={{ width:"100%", background:"transparent", color:C.cinza, border:"1px solid "+C.borda, borderRadius:6, padding:10, fontSize:13, cursor:"pointer" }}>
-          {"Entrar sem login (visitante)"}
-        </button>
       </div>
     </div>
   );
@@ -468,61 +379,37 @@ function SeletorIndice(props) {
 function ModalPerfil(props) {
   var perfil = props.perfil;
   var _s1 = useState(perfil.nome || ""); var nome = _s1[0]; var setNome = _s1[1];
-  var _s2 = useState(perfil.apiKey || ""); var apiKey = _s2[0]; var setApiKey = _s2[1];
-  var _s3 = useState(false); var showKey = _s3[0]; var setShowKey = _s3[1];
-  var _s4 = useState(""); var senhaModal = _s4[0]; var setSenhaModal = _s4[1];
-  var _s5 = useState(""); var erroModal = _s5[0]; var setErroModal = _s5[1];
-  var def = DEFENSORES[nome];
-  var salvar = async function() {
-    if (nome && def) {
-      var h = await hashSenha(senhaModal);
-      if (h !== def.hash) { setErroModal("Senha incorreta."); return; }
-    }
-    props.onSave({ nome: nome, lotacao: def ? def.lotacao : "", apiKey: apiKey });
+  var _s2 = useState(perfil.lotacao || ""); var defensoria = _s2[0]; var setDefensoria = _s2[1];
+  var _s3 = useState(""); var erroModal = _s3[0]; var setErroModal = _s3[1];
+  var salvar = function() {
+    if (!nome.trim()) { setErroModal("Informe o nome completo do Defensor."); return; }
+    if (!defensoria.trim()) { setErroModal("Informe o nome da Defensoria."); return; }
+    props.onSave({ nome: capitalizarNome(nome.trim()), lotacao: capitalizarNome(defensoria.trim()) });
     props.onClose();
   };
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" }}>
       <div style={{ background:C.branco, borderRadius:12, padding:32, width:460, maxWidth:"90vw", boxShadow:"0 8px 32px rgba(0,0,0,0.2)" }}>
-        <h2 style={{ margin:"0 0 20px", color:C.verde }}>{"Configurar Perfil"}</h2>
+        <h2 style={{ margin:"0 0 20px", color:C.verde }}>{"Editar Identificação"}</h2>
         <div style={{ marginBottom:14 }}>
-          <label style={{ display:"block", fontWeight:600, marginBottom:4, color:C.cinza, fontSize:13 }}>{"Nome do Defensor"}</label>
-          <select value={nome} onChange={function(e){setNome(e.target.value);setErroModal("");setSenhaModal("");}}
-            style={{ width:"100%", padding:"9px 12px", borderRadius:6, border:"1px solid "+C.borda, fontSize:14, boxSizing:"border-box" }}>
-            <option value="">{"-- Nenhum (visitante) --"}</option>
-            {Object.keys(DEFENSORES).map(function(d,i){ return <option key={i} value={d}>{d}</option>; })}
-          </select>
+          <label style={{ display:"block", fontWeight:600, marginBottom:4, color:C.cinza, fontSize:13 }}>{"Nome Completo do Defensor"}</label>
+          <input type="text" value={nome}
+            onChange={function(e){setNome(capitalizarNome(e.target.value));setErroModal("");}}
+            onKeyDown={function(e){if(e.key==="Enter")salvar();}}
+            placeholder={"Ex.: Robert Rios Magalhães Júnior"}
+            style={{ width:"100%", padding:"9px 12px", borderRadius:6, border:"1px solid "+C.borda, fontSize:14, boxSizing:"border-box" }} />
         </div>
-        {nome && def && (
-          <div>
-            <div style={{ marginBottom:14 }}>
-              <label style={{ display:"block", fontWeight:600, marginBottom:4, color:C.cinza, fontSize:13 }}>{"Defensoria"}</label>
-              <input value={def.lotacao} disabled style={{ width:"100%", padding:"9px 12px", borderRadius:6, border:"1px solid "+C.borda, fontSize:14, boxSizing:"border-box", background:C.cinzaClaro }} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <label style={{ display:"block", fontWeight:600, marginBottom:4, color:C.cinza, fontSize:13 }}>{"Senha"}</label>
-              <input type="password" value={senhaModal}
-                onChange={function(e){setSenhaModal(e.target.value);setErroModal("");}}
-                onKeyDown={function(e){if(e.key==="Enter")salvar();}}
-                placeholder={"Senha"}
-                style={{ width:"100%", padding:"9px 12px", borderRadius:6, border:"1px solid "+(erroModal?C.vermelho:C.borda), fontSize:14, boxSizing:"border-box" }} />
-              {erroModal && <div style={{ fontSize:12, color:C.vermelho, marginTop:4 }}>{erroModal}</div>}
-            </div>
-          </div>
+        <div style={{ marginBottom:20 }}>
+          <label style={{ display:"block", fontWeight:600, marginBottom:4, color:C.cinza, fontSize:13 }}>{"Nome da Defensoria"}</label>
+          <input type="text" value={defensoria}
+            onChange={function(e){setDefensoria(capitalizarNome(e.target.value));setErroModal("");}}
+            onKeyDown={function(e){if(e.key==="Enter")salvar();}}
+            placeholder={"Ex.: 2ª Defensoria Itinerante"}
+            style={{ width:"100%", padding:"9px 12px", borderRadius:6, border:"1px solid "+C.borda, fontSize:14, boxSizing:"border-box" }} />
+        </div>
+        {erroModal && (
+          <div style={{ background:"#fdecea", border:"1px solid #e57373", borderRadius:6, padding:"10px 12px", fontSize:12, color:C.vermelho, marginBottom:16 }}>{erroModal}</div>
         )}
-        <div style={{ marginBottom:14 }}>
-          <label style={{ display:"block", fontWeight:600, marginBottom:4, color:C.cinza, fontSize:13 }}>{"Chave API (opcional)"}</label>
-          <div style={{ position:"relative" }}>
-            <input type={showKey?"text":"password"} value={apiKey}
-              onChange={function(e){setApiKey(e.target.value);}}
-              placeholder={"sk-ant-..."}
-              style={{ width:"100%", padding:"9px 40px 9px 12px", borderRadius:6, border:"1px solid "+C.borda, fontSize:13, boxSizing:"border-box" }} />
-            <button onClick={function(){setShowKey(!showKey);}}
-              style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:16 }}>
-              {showKey?"✕":"○"}
-            </button>
-          </div>
-        </div>
         <div style={{ display:"flex", gap:10 }}>
           <Btn onClick={salvar}>{"Salvar"}</Btn>
           <Btn onClick={props.onClose} outline cor={C.cinza}>{"Cancelar"}</Btn>
@@ -535,23 +422,24 @@ function ModalPerfil(props) {
 function Header(props) {
   var perfil = props.perfil;
   return (
-    <div style={{ background:C.verde, color:"#fff", padding:"12px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-        <img src="/logo-apidep.png" alt="DEFCALC"
-          style={{ height:56, objectFit:"contain" }}
+    <div style={{ background:C.verde, color:"#fff", padding:"10px 28px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap", borderBottom:"4px solid "+C.verdeClaro }}>
+      <div style={{ display:"flex", alignItems:"center", gap:18, minWidth:0 }}>
+        <img src="/logo-apidep.png" alt="APIDEP"
+          style={{ height:62, objectFit:"contain" }}
           onError={function(e){e.target.style.display="none";}} />
-        <div>
+        <div style={{ borderLeft:"1px solid rgba(255,255,255,0.25)", paddingLeft:18 }}>
           <div style={{ fontWeight:800, fontSize:16 }}>{"Calculadora de Débitos Alimentares"}</div>
-          <div style={{ fontSize:12, opacity:.8 }}>{"DEFCALC — AMIGOS DA DEFENSORIA"}</div>
+          <div style={{ fontSize:11, opacity:.75, letterSpacing:0.3 }}>{"Execução de Alimentos — art. 528 CPC"}</div>
         </div>
       </div>
       <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-        <button onClick={props.onPerfil}
-          style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.4)", borderRadius:6, color:"#fff", padding:"7px 14px", cursor:"pointer", fontSize:13 }}>
-          {perfil.nome || "Visitante"}
+        <button onClick={props.onPerfil} title={perfil.lotacao||""}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.35)", borderRadius:8, color:"#fff", padding:"7px 14px", cursor:"pointer", fontSize:13, textAlign:"left" }}>
+          <div style={{ fontWeight:700 }}>{perfil.nome || "Identificar-se"}</div>
+          {perfil.lotacao && <div style={{ fontSize:11, opacity:.75 }}>{perfil.lotacao}</div>}
         </button>
         <button onClick={props.onLogout}
-          style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:6, color:"#fff", padding:"7px 12px", cursor:"pointer", fontSize:12 }}>
+          style={{ background:"transparent", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, color:"#fff", padding:"7px 12px", cursor:"pointer", fontSize:12 }}>
           {"Sair"}
         </button>
       </div>
@@ -570,7 +458,7 @@ function gerarPDFCompleto(resultado, logoData) {
   var doc = new jsPDF({ orientation:"landscape", unit:"mm", format:"a4" });
   var W=297, mg=12, y=0;
 
-  doc.setFillColor(26,107,58); doc.rect(0,0,W,28,"F");
+  doc.setFillColor(0,69,58); doc.rect(0,0,W,28,"F");
   if (logoData) {
     try { var lh=18, lw=Math.min(Math.max(lh*_logoRatio,30),65); doc.addImage(logoData,"PNG",6,5,lw,lh); doc.addImage(logoData,"PNG",W-6-lw,5,lw,lh); } catch(e){}
   }
@@ -580,12 +468,12 @@ function gerarPDFCompleto(resultado, logoData) {
   doc.setFontSize(9); doc.setFont("helvetica","normal");
   doc.text("Débito Alimentar — Execução de Alimentos (art. 528 CPC)", W/2, 16, {align:"center"});
   doc.setFontSize(7.5);
-  doc.text("DEFCALC — AMIGOS DA DEFENSORIA", W/2, 22, {align:"center"});
+  doc.text("APIDEP — Associação Piauiense das Defensoras e dos Defensores Públicos", W/2, 22, {align:"center"});
   y = 36;
 
   doc.setFillColor(232,245,238); doc.rect(mg,y,W-mg*2,40,"F");
-  doc.setDrawColor(26,107,58); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,40);
-  doc.setFillColor(26,107,58); doc.rect(mg,y,W-mg*2,7,"F");
+  doc.setDrawColor(0,69,58); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,40);
+  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,7,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
   doc.text("DADOS DO PROCESSO", mg+3, y+5);
   y += 10;
@@ -617,10 +505,10 @@ function gerarPDFCompleto(resultado, logoData) {
   y += 10;
 
   if (resultado.justificativa) {
-    doc.setTextColor(26,107,58); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setTextColor(0,69,58); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
     doc.text("JUSTIFICATIVA / OBSERVAÇÕES", mg, y);
     y += 5;
-    doc.setDrawColor(26,107,58); doc.line(mg,y,W-mg,y); y += 4;
+    doc.setDrawColor(0,69,58); doc.line(mg,y,W-mg,y); y += 4;
     doc.setTextColor(40,40,40); doc.setFont("helvetica","normal"); doc.setFontSize(8);
     var linhas = doc.splitTextToSize(resultado.justificativa, W-mg*2);
     linhas.forEach(function(l){ if(y>185){doc.addPage();y=15;} doc.text(l,mg,y); y+=4.5; });
@@ -652,13 +540,13 @@ function gerarPDFCompleto(resultado, logoData) {
       doc.text(vcto,cx[2],y+2);
       doc.text(fmt(p.smVig),cx[3],y+2);
       doc.text(fmt(p.nominal),cx[4],y+2);
-      if(p.pagoOriginal>0){doc.setTextColor(26,107,58);doc.setFont("helvetica","bold");}
+      if(p.pagoOriginal>0){doc.setTextColor(0,69,58);doc.setFont("helvetica","bold");}
       doc.text(p.pagoOriginal>0?fmt(p.pagoOriginal):"-",cx[5],y+2);
       doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
       if(p.creditoAplicado>0){doc.setTextColor(26,82,118);doc.setFont("helvetica","bold");doc.text(fmt(p.creditoAplicado),cx[6],y+2);doc.setTextColor(40,40,40);doc.setFont("helvetica","normal");}
       else{doc.text("-",cx[6],y+2);}
       doc.setFont("helvetica","bold");
-      if(p.quitado){doc.setTextColor(26,107,58);doc.text("QUITADO",cx[7],y+2);}
+      if(p.quitado){doc.setTextColor(0,69,58);doc.text("QUITADO",cx[7],y+2);}
       else{doc.setTextColor(40,40,40);doc.text(fmt(r2(p.saldoBruto)),cx[7],y+2);}
       doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
       doc.text(p.fator.toFixed(6),cx[8],y+2);
@@ -666,7 +554,7 @@ function gerarPDFCompleto(resultado, logoData) {
       doc.text(String(p.mesesAtraso),cx[10],y+2);
       doc.text((p.quitado||resultado.indice==="selic")?"-":fmt(p.juros),cx[11],y+2);
       doc.setFont("helvetica","bold");
-      if(p.quitado){doc.setTextColor(26,107,58);doc.text("-",cx[12],y+2);}
+      if(p.quitado){doc.setTextColor(0,69,58);doc.text("-",cx[12],y+2);}
       else{doc.setTextColor(40,40,40);doc.text(fmt(p.total),cx[12],y+2);}
       y += 5.5;
     });
@@ -679,11 +567,11 @@ function gerarPDFCompleto(resultado, logoData) {
   if (resultado.penhora.length > 0)
     desenharTabela("BLOCO 2 — DÉBITO ANTERIOR (art. 528, §8º, CPC)", [26,82,118], resultado.penhora, resultado.totalPenhora, 1);
   if (resultado.prisao.length > 0)
-    desenharTabela("BLOCO 1 — ÚLTIMAS 3 PARCELAS (art. 528, §3º, CPC)", [26,107,58], resultado.prisao, resultado.totalPrisao, resultado.penhora.length+1);
+    desenharTabela("BLOCO 1 — ÚLTIMAS 3 PARCELAS (art. 528, §3º, CPC)", [0,69,58], resultado.prisao, resultado.totalPrisao, resultado.penhora.length+1);
 
   if(y>165){doc.addPage();y=15;}
   var bW=(W-mg*2-4)/2;
-  doc.setFillColor(26,107,58); doc.rect(mg,y,bW,22,"F");
+  doc.setFillColor(0,69,58); doc.rect(mg,y,bW,22,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8);
   doc.text("BLOCO 1 — PRISÃO CIVIL", mg+3, y+7);
   doc.setFontSize(7); doc.setFont("helvetica","normal");
@@ -727,7 +615,6 @@ function gerarPDFCompleto(resultado, logoData) {
   doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
   doc.text(resultado.defensor||"", W/2, y, {align:"center"}); y+=5;
   doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-  doc.text("Defensor(a) Público(a)", W/2, y, {align:"center"}); y+=4;
   if(resultado.lotacao) doc.text(resultado.lotacao, W/2, y, {align:"center"});
 
   var fn = "Memorial_Calculo_"+(resultado.processo||"calculo")+"_"+resultado.data.replace(/\//g,"-")+".pdf";
@@ -747,7 +634,7 @@ function gerarPDFAtuPenhora(dados, logoData) {
   var doc = new jsPDF({ orientation:"landscape", unit:"mm", format:"a4" });
   var W=297, mg=12, y=0;
 
-  doc.setFillColor(26,82,118); doc.rect(0,0,W,28,"F");
+  doc.setFillColor(0,69,58); doc.rect(0,0,W,28,"F");
   if (logoData) {
     try { var lh=18, lw=Math.min(Math.max(lh*_logoRatio,30),65); doc.addImage(logoData,"PNG",6,5,lw,lh); doc.addImage(logoData,"PNG",W-6-lw,5,lw,lh); } catch(e){}
   }
@@ -757,7 +644,7 @@ function gerarPDFAtuPenhora(dados, logoData) {
   doc.setFontSize(9); doc.setFont("helvetica","normal");
   doc.text("Execução de Alimentos — art. 528, §8º, CPC (expropriação)", W/2, 16, {align:"center"});
   doc.setFontSize(7.5);
-  doc.text("DEFCALC — AMIGOS DA DEFENSORIA", W/2, 22, {align:"center"});
+  doc.text("APIDEP — Associação Piauiense das Defensoras e dos Defensores Públicos", W/2, 22, {align:"center"});
   y = 36;
 
   doc.setFillColor(232,240,250); doc.rect(mg,y,W-mg*2,32,"F");
@@ -828,7 +715,7 @@ function gerarPDFAtuPenhora(dados, logoData) {
       doc.setTextColor(40,40,40);
       doc.text(pg.label,pgCols[0],y+2);
       doc.text(fmt(pg.saldoCorrigido),pgCols[1],y+2);
-      doc.setTextColor(26,107,58); doc.setFont("helvetica","bold");
+      doc.setTextColor(0,69,58); doc.setFont("helvetica","bold");
       doc.text("- "+fmt(pg.pagamento),pgCols[2],y+2);
       doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
       doc.text(fmt(pg.saldoRestante),pgCols[3],y+2);
@@ -905,7 +792,6 @@ function gerarPDFAtuPenhora(dados, logoData) {
   doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
   doc.text(dados.defensor||"", W/2, y, {align:"center"}); y+=5;
   doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-  doc.text("Defensor(a) Público(a)", W/2, y, {align:"center"}); y+=4;
   if(dados.lotacao) doc.text(dados.lotacao, W/2, y, {align:"center"});
 
   var fn="Atualizacao_Penhora_"+(dados.processo||"calculo")+"_"+dados.dataBase.replace(/\//g,"-")+".pdf";
@@ -925,7 +811,7 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   var doc = new jsPDF({ orientation:"landscape", unit:"mm", format:"a4" });
   var W=297, mg=12, y=0;
 
-  doc.setFillColor(26,107,58); doc.rect(0,0,W,28,"F");
+  doc.setFillColor(0,69,58); doc.rect(0,0,W,28,"F");
   if (logoData) {
     try { var lh=18, lw=Math.min(Math.max(lh*_logoRatio,30),65); doc.addImage(logoData,"PNG",6,5,lw,lh); doc.addImage(logoData,"PNG",W-6-lw,5,lw,lh); } catch(e){}
   }
@@ -935,12 +821,12 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   doc.setFontSize(9); doc.setFont("helvetica","normal");
   doc.text("Execução de Alimentos — art. 528, §3º, CPC (prisão civil)", W/2, 16, {align:"center"});
   doc.setFontSize(7.5);
-  doc.text("DEFCALC — AMIGOS DA DEFENSORIA", W/2, 22, {align:"center"});
+  doc.text("APIDEP — Associação Piauiense das Defensoras e dos Defensores Públicos", W/2, 22, {align:"center"});
   y = 36;
 
   doc.setFillColor(232,245,238); doc.rect(mg,y,W-mg*2,32,"F");
-  doc.setDrawColor(26,107,58); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,32);
-  doc.setFillColor(26,107,58); doc.rect(mg,y,W-mg*2,7,"F");
+  doc.setDrawColor(0,69,58); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,32);
+  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,7,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
   doc.text("DADOS DO PROCESSO", mg+3, y+5);
   y += 10;
@@ -959,9 +845,9 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   y += 12;
 
   if (resultado.justificativa) {
-    doc.setTextColor(26,107,58); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setTextColor(0,69,58); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
     doc.text("JUSTIFICATIVA / OBSERVAÇÕES", mg, y);
-    y += 5; doc.setDrawColor(26,107,58); doc.line(mg,y,W-mg,y); y+=4;
+    y += 5; doc.setDrawColor(0,69,58); doc.line(mg,y,W-mg,y); y+=4;
     doc.setTextColor(40,40,40); doc.setFont("helvetica","normal"); doc.setFontSize(8);
     var linhas=doc.splitTextToSize(resultado.justificativa, W-mg*2);
     linhas.forEach(function(l){if(y>185){doc.addPage();y=15;}doc.text(l,mg,y);y+=4.5;});
@@ -969,7 +855,7 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   }
 
   if(y>150){doc.addPage();y=15;}
-  doc.setFillColor(26,107,58); doc.rect(mg,y,W-mg*2,7,"F");
+  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,7,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
   doc.text("PARCELAS EM ABERTO — RITO DA PRISÃO CIVIL (art. 528, §3º, CPC)", mg+3, y+5);
   y += 9;
@@ -994,13 +880,13 @@ function gerarPDFAtuPrisao(resultado, logoData) {
     doc.text(vcto,cx[2],y+2);
     doc.text(fmt(p.smVig),cx[3],y+2);
     doc.text(fmt(p.nominal),cx[4],y+2);
-    if(p.pagoOriginal>0){doc.setTextColor(26,107,58);doc.setFont("helvetica","bold");}
+    if(p.pagoOriginal>0){doc.setTextColor(0,69,58);doc.setFont("helvetica","bold");}
     doc.text(p.pagoOriginal>0?fmt(p.pagoOriginal):"-",cx[5],y+2);
     doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
     if(p.creditoAplicado>0){doc.setTextColor(26,82,118);doc.setFont("helvetica","bold");doc.text(fmt(p.creditoAplicado),cx[6],y+2);doc.setTextColor(40,40,40);doc.setFont("helvetica","normal");}
     else{doc.text("-",cx[6],y+2);}
     doc.setFont("helvetica","bold");
-    if(p.quitado){doc.setTextColor(26,107,58);doc.text("QUITADO",cx[7],y+2);}
+    if(p.quitado){doc.setTextColor(0,69,58);doc.text("QUITADO",cx[7],y+2);}
     else{doc.setTextColor(40,40,40);doc.text(fmt(r2(p.saldoBruto)),cx[7],y+2);}
     doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
     doc.text(p.fator.toFixed(6),cx[8],y+2);
@@ -1008,12 +894,12 @@ function gerarPDFAtuPrisao(resultado, logoData) {
     doc.text(String(p.mesesAtraso),cx[10],y+2);
     doc.text((p.quitado||resultado.indice==="selic")?"-":fmt(p.juros),cx[11],y+2);
     doc.setFont("helvetica","bold");
-    if(p.quitado){doc.setTextColor(26,107,58);doc.text("-",cx[12],y+2);}
+    if(p.quitado){doc.setTextColor(0,69,58);doc.text("-",cx[12],y+2);}
     else{doc.setTextColor(40,40,40);doc.text(fmt(p.total),cx[12],y+2);}
     y+=5.5;
   });
 
-  doc.setFillColor(26,107,58); doc.rect(mg,y,W-mg*2,6,"F");
+  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,6,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8);
   doc.text("TOTAL (PRISÃO CIVIL): "+fmt(resultado.total), W-mg-3, y+4, {align:"right"});
   y+=14;
@@ -1024,8 +910,8 @@ function gerarPDFAtuPrisao(resultado, logoData) {
     var nExtraR = (resultado.multaVal > 0 ? 6 : 0) + (resultado.honorariosVal > 0 ? 6 : 0);
     var boxHR = 39 + nExtraR;
     doc.setFillColor(232,245,238); doc.rect(mg,y,bW,boxHR,"F");
-    doc.setDrawColor(26,107,58); doc.setLineWidth(0.3); doc.rect(mg,y,bW,boxHR);
-    doc.setFillColor(26,107,58); doc.rect(mg,y,bW,7,"F");
+    doc.setDrawColor(0,69,58); doc.setLineWidth(0.3); doc.rect(mg,y,bW,boxHR);
+    doc.setFillColor(0,69,58); doc.rect(mg,y,bW,7,"F");
     doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
     doc.text("COMPOSIÇÃO DO VALOR DA EXECUÇÃO", mg+3, y+5);
     y += 10;
@@ -1045,7 +931,7 @@ function gerarPDFAtuPrisao(resultado, logoData) {
     lbP("TOTAL FINAL (atualiz. + multa + honorários):", resultado.totalGeral, true);
     y += 6;
   } else {
-    doc.setFillColor(26,107,58); doc.rect(mg,y,bW,18,"F");
+    doc.setFillColor(0,69,58); doc.rect(mg,y,bW,18,"F");
     doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(9);
     doc.text("TOTAL — PRISÃO CIVIL — art. 528, §3º, CPC", mg+4, y+7);
     doc.setFontSize(14);
@@ -1078,7 +964,6 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
   doc.text(resultado.defensor||"", W/2, y, {align:"center"}); y+=5;
   doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-  doc.text("Defensor(a) Público(a)", W/2, y, {align:"center"}); y+=4;
   if(resultado.lotacao) doc.text(resultado.lotacao, W/2, y, {align:"center"});
 
   var fn="Atualizacao_Prisao_"+(resultado.processo||"calculo")+"_"+resultado.data.replace(/\//g,"-")+".pdf";
@@ -1096,9 +981,7 @@ function gerarPDFAtuPrisao(resultado, logoData) {
 
 function TabAtualizacao(props) {
   var perfil = props.perfil;
-  var usuario = props.usuario;
   var onSalvarHistorico = props.onSalvarHistorico;
-  var onAcessoNegado = props.onAcessoNegado || function(){};
   var ini = props.initialData || {};
 
   var _sm = useState(ini.subModo || "penhora"); var subModo = _sm[0]; var setSubModo = _sm[1];
@@ -1238,7 +1121,6 @@ function TabAtualizacao(props) {
   };
 
   var calcularPrisao = function(){
-    if (!usuario.autenticado && !perfil.nome) { onAcessoNegado(); return; }
     setLoading(true); setResPrisao(null);
     setTimeout(function(){
       var raw = parcelas
@@ -1533,7 +1415,7 @@ function TabAtualizacao(props) {
             <Card style={{ borderLeft:"4px solid "+C.azul }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
                 <h3 style={{ margin:0, color:C.azul }}>{"Resultado — Atualização (Penhora)"}</h3>
-                <Btn onClick={function(){carregarLogo("#1a5276").then(function(ld){gerarPDFAtuPenhora(resPenhora,ld);});}} cor={C.azul}>{"Gerar PDF"}</Btn>
+                <Btn onClick={function(){carregarLogo().then(function(ld){gerarPDFAtuPenhora(resPenhora,ld);});}} cor={C.azul}>{"Gerar PDF"}</Btn>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
                 {[
@@ -1767,7 +1649,7 @@ function TabAtualizacao(props) {
             <Card style={{ borderLeft:"4px solid "+C.verde }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
                 <h3 style={{ margin:0, color:C.verde }}>{"Resultado — Atualização (Prisão Civil)"}</h3>
-                <Btn onClick={function(){carregarLogo("#1a6b3a").then(function(ld){gerarPDFAtuPrisao(resPrisao,ld);});}} cor={C.verde}>{"Gerar PDF"}</Btn>
+                <Btn onClick={function(){carregarLogo().then(function(ld){gerarPDFAtuPrisao(resPrisao,ld);});}} cor={C.verde}>{"Gerar PDF"}</Btn>
               </div>
               {resPrisao.obsImputacao && (
                 <div style={{ background:"#fff8e1", border:"1px solid #f0c040", borderRadius:8, padding:"12px 16px", marginBottom:12, fontSize:12, color:"#555", lineHeight:1.6 }}>
@@ -1829,15 +1711,23 @@ function TabAtualizacao(props) {
 // ===================== APP PRINCIPAL =====================
 
 export default function App() {
-  var _s1 = useState(null); var logado = _s1[0]; var setLogado = _s1[1];
+  var _s1 = useState(function(){
+    try {
+      var p = JSON.parse(localStorage.getItem("dpe_perfil") || "null");
+      if (p && p.nome && p.lotacao) return p;
+    } catch(e){}
+    return null;
+  }); var logado = _s1[0]; var setLogado = _s1[1];
   var fazerLogout = function() {
-    localStorage.removeItem("dpe_perfil"); localStorage.removeItem("dpe_historico");
+    localStorage.removeItem("dpe_perfil");
     setLogado(null); setTimeout(function(){window.location.reload();},50);
   };
   if (!logado) return (
     <TelaLogin
-      onLogin={function(u){setLogado(u);}}
-      onVisitante={function(){setLogado({nome:"",lotacao:"",autenticado:false});}} />
+      onLogin={function(u){
+        try { localStorage.setItem("dpe_perfil", JSON.stringify(u)); } catch(e){}
+        setLogado(u);
+      }} />
   );
   return <AppInterno usuario={logado} onLogout={fazerLogout} />;
 }
@@ -1846,16 +1736,11 @@ function AppInterno(props) {
   var usuario = props.usuario;
   var onLogout = props.onLogout;
 
-  var _p = useState(function(){
-    if(usuario.autenticado) return {nome:usuario.nome,lotacao:usuario.lotacao,apiKey:""};
-    try{return JSON.parse(localStorage.getItem("dpe_perfil")||"{}");} catch(e){return {};}
-  }); var perfil = _p[0]; var setPerfil = _p[1];
+  var _p = useState({ nome: usuario.nome, lotacao: usuario.lotacao });
+  var perfil = _p[0]; var setPerfil = _p[1];
 
   var _sp = useState(false); var showPerfil = _sp[0]; var setShowPerfil = _sp[1];
   var _st = useState("calc"); var tab = _st[0]; var setTab = _st[1];
-
-  // ← NOVO: estado do modal de acesso restrito
-  var _ma = useState(false); var showModalAcesso = _ma[0]; var setShowModalAcesso = _ma[1];
 
   var _sh = useState(function(){
     try{return JSON.parse(localStorage.getItem("dpe_historico")||"[]");} catch(e){return [];}
@@ -1934,9 +1819,6 @@ function AppInterno(props) {
   var _just=useState(""); var justificativa=_just[0]; var setJustificativa=_just[1];
   var _res=useState(null); var resultado=_res[0]; var setResultado=_res[1];
   var _ld=useState(false); var loading=_ld[0]; var setLoading=_ld[1];
-  var _lia=useState(false); var loadingIA=_lia[0]; var setLoadingIA=_lia[1];
-  var _mia=useState(""); var msgIA=_mia[0]; var setMsgIA=_mia[1];
-  var fileRef=useRef();
 
   var inpStyle={width:"100%",padding:"8px",borderRadius:6,border:"1px solid "+C.borda,fontSize:13,boxSizing:"border-box"};
 
@@ -1964,39 +1846,7 @@ function AppInterno(props) {
     setIntervalo(function(i){return Object.assign({},i,{pago:""});});
   };
 
-  var handleUpload=function(e){
-    var file=e.target.files[0];if(!file)return;
-    if(!perfil.apiKey){setMsgIA("Erro: Configure sua chave de API no perfil.");return;}
-    setLoadingIA(true);setMsgIA("Lendo documento com IA...");
-    var reader=new FileReader();
-    reader.onload=function(){
-      var base64=reader.result.split(",")[1];
-      var block=file.type==="application/pdf"
-        ?{type:"document",source:{type:"base64",media_type:"application/pdf",data:base64}}
-        :{type:"image",source:{type:"base64",media_type:file.type,data:base64}};
-      fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":perfil.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[block,{type:"text",text:"Extraia: número do processo CNJ, alimentado, alimentante, parcelas. Responda SOMENTE em JSON: {\"processo\":\"\",\"alimentado\":\"\",\"alimentante\":\"\",\"parcelas\":[{\"mes\":1,\"ano\":2024,\"valor\":1500.00}]}"}]}]})
-      }).then(function(resp){return resp.json();}).then(function(data){
-        var text=(data.content&&data.content[0]&&data.content[0].text)||"";
-        var parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
-        if(parsed.processo)setProcesso(parsed.processo.replace(/\D/g,"").slice(0,17));
-        if(parsed.alimentado)setAlimentado(capitalizarNome(parsed.alimentado));
-        if(parsed.alimentante)setAlimentante(capitalizarNome(parsed.alimentante));
-        if(parsed.parcelas&&parsed.parcelas.length)
-          setParcelas(parsed.parcelas.map(function(p,i){return {id:Date.now()+i,mes:p.mes,ano:p.ano,valor:fmtNum(p.valor),pago:"",is13:false};}));
-        setMsgIA("OK! "+(parsed.parcelas?parsed.parcelas.length:0)+" parcela(s) extraída(s). Revise antes de calcular.");
-        setLoadingIA(false); if(fileRef.current)fileRef.current.value="";
-      }).catch(function(){setMsgIA("Erro: Não foi possível ler o documento.");setLoadingIA(false);if(fileRef.current)fileRef.current.value="";});
-    };
-    reader.onerror=function(){setMsgIA("Erro ao ler arquivo.");setLoadingIA(false);};
-    reader.readAsDataURL(file);
-  };
-
   var calcular=function(){
-    // ← ALTERADO: substitui alert por modal customizado
-    if(!usuario.autenticado&&!perfil.nome){setShowModalAcesso(true);return;}
     setLoading(true);setResultado(null);
     setTimeout(function(){
       var raw=parcelas
@@ -2103,9 +1953,6 @@ function AppInterno(props) {
 
       {showPerfil && <ModalPerfil perfil={perfil} onSave={salvarPerfil} onClose={function(){setShowPerfil(false);}} />}
 
-      {/* ← NOVO: Modal de acesso restrito com figurinha */}
-      <ModalAcesso visivel={showModalAcesso} onClose={function(){setShowModalAcesso(false);}} />
-
       <div style={{ background:C.branco, borderBottom:"1px solid "+C.borda, display:"flex", padding:"0 28px" }}>
         {[
           ["calc","Novo Cálculo"],
@@ -2129,44 +1976,6 @@ function AppInterno(props) {
 
         {tab==="calc" && (
           <div>
-            {!perfil.nome && (
-              <div style={{ background:"#fff8e1", border:"1px solid #f0c040", borderRadius:8, padding:"12px 18px", marginBottom:18, fontSize:14 }}>
-                {"Configure seu perfil para aparecer nos PDFs. "}
-                <span style={{ color:C.verde, cursor:"pointer", textDecoration:"underline" }} onClick={function(){setShowPerfil(true);}}>{"Configurar agora"}</span>
-              </div>
-            )}
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 }}>
-              <Card style={{ margin:0, borderTop:"3px solid "+C.azul }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                  <span style={{ fontSize:20 }}>{"A"}</span>
-                  <div>
-                    <div style={{ fontWeight:700, color:C.azul, fontSize:14 }}>{"Opção A — Importar com IA"}</div>
-                    <div style={{ fontSize:11, color:"#666" }}>{"Envie a sentença e a IA preenche"}</div>
-                  </div>
-                </div>
-                <input ref={fileRef} type="file" accept=".pdf,image/*" onChange={handleUpload} style={{ display:"none" }} />
-                <Btn onClick={function(){fileRef.current.click();}} disabled={loadingIA} cor={C.azul} small>
-                  {loadingIA?"Processando...":"Selecionar PDF ou imagem"}
-                </Btn>
-                {msgIA && <div style={{ marginTop:8, fontSize:12, color:msgIA.indexOf("OK")===0?C.verde:C.vermelho }}>{msgIA}</div>}
-                {!perfil.apiKey && <div style={{ marginTop:6, fontSize:11, color:"#999" }}>{"Opcional. Requer chave API no perfil."}</div>}
-              </Card>
-              <Card style={{ margin:0, borderTop:"3px solid "+C.verde }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                  <span style={{ fontSize:20 }}>{"B"}</span>
-                  <div>
-                    <div style={{ fontWeight:700, color:C.verde, fontSize:14 }}>{"Cálculo Manual"}</div>
-                    <div style={{ fontSize:11, color:"#666" }}>{"Sempre disponível"}</div>
-                  </div>
-                </div>
-                <div style={{ fontSize:12, color:"#555" }}>{"Preencha os dados abaixo."}</div>
-                <div style={{ marginTop:10 }}>
-                  <span style={{ background:C.verdePale, color:C.verde, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>{"Sem conta necessária"}</span>
-                </div>
-              </Card>
-            </div>
-
             <Card>
               <h3 style={{ margin:"0 0 16px", color:C.verde, fontSize:15 }}>{"Dados do Processo"}</h3>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 16px" }}>
@@ -2341,7 +2150,7 @@ function AppInterno(props) {
                   <h3 style={{ margin:0, color:C.verde }}>{"Resultado"}</h3>
                   <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                     <span style={{ fontSize:12, color:"#888" }}>{resultado.indiceLabel}</span>
-                    <Btn onClick={function(){carregarLogo("#1a6b3a").then(function(ld){gerarPDFCompleto(resultado,ld);});}} cor={C.azul}>{"Gerar PDF"}</Btn>
+                    <Btn onClick={function(){carregarLogo().then(function(ld){gerarPDFCompleto(resultado,ld);});}} cor={C.azul}>{"Gerar PDF"}</Btn>
                   </div>
                 </div>
                 {resultado.processo && <p style={{ margin:"0 0 4px", fontSize:13, color:"#666" }}>{"Processo: "}<strong>{resultado.processo}</strong></p>}
@@ -2405,9 +2214,7 @@ function AppInterno(props) {
             key={atuKey}
             initialData={atuInitial}
             perfil={perfil}
-            usuario={usuario}
             onSalvarHistorico={salvarHistorico}
-            onAcessoNegado={function(){setShowModalAcesso(true);}}
           />
         )}
 
