@@ -267,6 +267,11 @@ function atualizarIndicesOficiais() {
   return _promIndices;
 }
 
+function labelIndicePDF(indice) {
+  if (indice === "selic") return "SELIC (índice até " + fmtChaveMes(ultimaChave(SELIC)) + ")";
+  return "IPCA-E (índice até " + fmtChaveMes(ultimaChave(IPCA_E)) + ")";
+}
+
 function notaCobertura(indice) {
   var ate = fmtChaveMes(ultimaChave(indice === "selic" ? SELIC : IPCA_E));
   var fonte = FONTE_INDICES.online
@@ -295,7 +300,7 @@ function corrigirAteIPCA(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
     juros: juros,
     total: r2(corrigido + juros),
     mesesAtraso: meses,
-    indiceLabel: "IPCA-E + Juros 1% a.m."
+    indiceLabel: "IPCA-E"
   };
 }
 
@@ -317,7 +322,7 @@ function corrigirAteSELIC(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
     juros: 0,
     total: total,
     mesesAtraso: meses,
-    indiceLabel: "SELIC (acumulada)"
+    indiceLabel: "SELIC"
   };
 }
 
@@ -468,7 +473,7 @@ function SeletorIndice(props) {
       <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
         {[
           ["ipca", "IPCA-E + Juros 1% a.m.", "Correção monetária (IPCA) + juros de mora 1% a.m."],
-          ["selic", "SELIC", "Taxa SELIC acumulada — substitui correção e juros"]
+          ["selic", "SELIC", "Taxa SELIC acumulada — não incidem juros de mora (vedação legal)"]
         ].map(function(item){
           var v=item[0], l=item[1], desc=item[2];
           var ativo = indice === v;
@@ -613,12 +618,12 @@ function gerarPDFCompleto(resultado, logoData) {
     : fmt(parseMoney(resultado.valorFixoAlimento||"0"))+" (valor fixo)";
   lb("Alimentos fixados:", tl, c1, y);
   lb("Vencimento:", "Dia "+resultado.diaVencimento, c2, y);
-  lb("Índice:", resultado.indiceLabel || "IPCA-E (IBGE)", c3, y);
+  lb("Índice:", labelIndicePDF(resultado.indice), c3, y);
   y += 8;
   if (resultado.indice === "ipca") {
     lb("Juros de mora:", "1% ao mês — art. 406 CC c/c art. 161, §1º, CTN", c1, y);
   } else {
-    lb("SELIC:", "Taxa acumulada mensal (substitui correção e juros)", c1, y);
+    lb("Juros de mora:", "Não incidem — vedação legal: a SELIC já engloba correção monetária e juros", c1, y);
   }
   y += 10;
 
@@ -712,7 +717,7 @@ function gerarPDFCompleto(resultado, logoData) {
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
   var obsLines = resultado.indice === "selic" ? [
     "1. " + notaCobertura("selic"),
-    "2. SELIC como fator único de atualização do débito alimentar (art. 406 CC c/c Lei 9.250/95).",
+    "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95).",
     "3. Bloco 1 (art. 528, §3º, CPC): últimas 3 parcelas — execução pelo rito da prisão civil.",
     "4. Bloco 2 (art. 528, §8º, CPC): parcelas anteriores — execução pelo rito da penhora.",
     "5. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
@@ -784,7 +789,12 @@ function gerarPDFAtuPenhora(dados, logoData) {
   lb("Exequente:", dados.alimentado, c1, y);
   lb("Executado:", dados.alimentante, c2, y);
   y += 8;
-  lb("Índice:", dados.indiceLabel, c1, y);
+  lb("Índice:", labelIndicePDF(dados.indice), c1, y);
+  if (dados.indice === "ipca") {
+    lb("Juros de mora:", "1% ao mês (art. 406 CC c/c art. 161, §1º, CTN)", c2, y);
+  } else {
+    lb("Juros de mora:", "Não incidem — vedação legal (SELIC já engloba juros)", c2, y);
+  }
   y += 12;
 
   doc.setFillColor(26,82,118); doc.rect(mg,y,W-mg*2,7,"F");
@@ -883,7 +893,7 @@ function gerarPDFAtuPenhora(dados, logoData) {
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
   var obs = dados.indice === "selic" ? [
     "1. Atualização pela taxa SELIC acumulada mensal, contada a partir da data de referência até a data-base do cálculo.",
-    "2. A SELIC substitui a correção monetária e os juros de mora (art. 406 CC c/c Lei 9.250/95).",
+    "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95).",
     "3. " + notaCobertura("selic"),
     "4. Rito da penhora (expropriação) — art. 528, §8º, CPC."
   ] : [
@@ -958,8 +968,13 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   lb("Exequente:", resultado.alimentado, c1, y);
   lb("Executado:", resultado.alimentante, c2, y);
   y += 8;
-  lb("Índice:", resultado.indiceLabel||"IPCA-E (IBGE)", c1, y);
+  lb("Índice:", labelIndicePDF(resultado.indice), c1, y);
   lb("Vencimento:", "Dia "+resultado.diaVencimento, c2, y);
+  if (resultado.indice === "ipca") {
+    lb("Juros:", "1% a.m. (art. 406 CC)", c3, y);
+  } else {
+    lb("Juros:", "Não incidem (vedação legal)", c3, y);
+  }
   y += 12;
 
   if (resultado.justificativa) {
@@ -1063,7 +1078,7 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
   var obsP = resultado.indice==="selic" ? [
     "1. " + notaCobertura("selic"),
-    "2. A SELIC substitui a correção monetária e os juros de mora (art. 406 CC c/c Lei 9.250/95).",
+    "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95).",
     "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
     "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
   ] : [
@@ -1174,7 +1189,7 @@ function TabAtualizacao(props) {
     if (!valorRef || valorRefNum <= 0) { alert("Informe o valor de referência."); return; }
     var hoje = new Date();
     var mHoje = hoje.getMonth()+1, aHoje = hoje.getFullYear();
-    var labelIndice = indice==="selic" ? "SELIC (acumulada)" : "IPCA-E + Juros 1% a.m.";
+    var labelIndice = indice==="selic" ? "SELIC" : "IPCA-E";
     var dataBase = hoje.toLocaleDateString("pt-BR");
     var dataRef = MESES[mesRef-1]+"/"+anoRef;
 
@@ -1337,7 +1352,7 @@ function TabAtualizacao(props) {
       var justFinal=justificativa.trim();
       if(obsImp){if(justFinal)justFinal+="\n\n";justFinal+=obsImp;}
 
-      var labelIndice=indice==="selic"?"SELIC (acumulada)":"IPCA-E + Juros 1% a.m.";
+      var labelIndice=indice==="selic"?"SELIC":"IPCA-E";
       var multaValP = r2(total * parseMoney(multaPct) / 100);
       var honorariosValP = r2(total * parseMoney(honorariosPct) / 100);
       var totalGeralP = r2(total + multaValP + honorariosValP);
@@ -2049,7 +2064,7 @@ function AppInterno(props) {
       var justFinal=justificativa.trim();
       if(obsImp){if(justFinal)justFinal+="\n\n";justFinal+=obsImp;}
 
-      var labelIndice=indice==="selic"?"SELIC (acumulada)":"IPCA-E + Juros 1% a.m.";
+      var labelIndice=indice==="selic"?"SELIC":"IPCA-E";
       var res={
         processo:maskProcesso(processo),
         alimentado:capitalizarNome(alimentado),
