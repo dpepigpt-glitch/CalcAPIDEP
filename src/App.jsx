@@ -392,7 +392,10 @@ function TelaLogin(props) {
         <div style={{ padding:"28px 36px 34px" }}>
           <div style={{ textAlign:"center", marginBottom:24 }}>
             <div style={{ fontWeight:800, fontSize:17, color:C.verde }}>{"Calculadora de Débitos Alimentares"}</div>
-            <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{"Identifique-se para constar nos memoriais de cálculo"}</div>
+            <div style={{ marginTop:8 }}>
+              <span style={{ background:C.laranja, color:"#fff", borderRadius:20, padding:"3px 14px", fontSize:11, fontWeight:800, letterSpacing:1.5 }}>{"VERSÃO BETA"}</span>
+            </div>
+            <div style={{ fontSize:12, color:"#888", marginTop:10 }}>{"Identifique-se para constar nos memoriais de cálculo"}</div>
           </div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontWeight:600, marginBottom:6, fontSize:13, color:C.cinza }}>{"Nome Completo do Defensor"}</label>
@@ -417,7 +420,11 @@ function TelaLogin(props) {
             style={{ width:"100%", background:C.verde, color:"#fff", border:"none", borderRadius:8, padding:13, fontSize:15, fontWeight:700, cursor:"pointer" }}>
             {"Acessar a Calculadora"}
           </button>
-          <div style={{ textAlign:"center", fontSize:11, color:"#aaa", marginTop:16 }}>
+          <div style={{ background:C.verdePale, border:"1px solid "+C.verde, borderRadius:8, padding:"12px 14px", marginTop:20, fontSize:11.5, color:"#3d5a50", lineHeight:1.6, textAlign:"justify" }}>
+            <b style={{ color:C.verde }}>{"Sistema colaborativo"}</b>
+            {" — desenvolvido por inteligência artificial em parceria com Defensoras e Defensores Públicos. O sistema é atualizado continuamente para corrigir erros apontados por colegas e para incluir novas opções e possibilidades de cálculo que atendam às necessidades dos processos que surgem e são apresentados. Por isso, solicitamos que eventuais inconsistências, erros e sugestões sejam encaminhadas à APIDEP."}
+          </div>
+          <div style={{ textAlign:"center", fontSize:11, color:"#aaa", marginTop:14 }}>
             {"APIDEP — Associação Piauiense das Defensoras e dos Defensores Públicos"}
           </div>
         </div>
