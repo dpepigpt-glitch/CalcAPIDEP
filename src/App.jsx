@@ -472,7 +472,7 @@ function SeletorIndice(props) {
       </label>
       <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
         {[
-          ["ipca", "IPCA-E + Juros 1% a.m.", "Correção monetária (IPCA) + juros de mora 1% a.m."],
+          ["ipca", "IPCA-E", "Correção monetária pelo IPCA-E + juros de mora de 1% a.m."],
           ["selic", "SELIC", "Taxa SELIC acumulada — não incidem juros de mora (vedação legal)"]
         ].map(function(item){
           var v=item[0], l=item[1], desc=item[2];
@@ -614,8 +614,8 @@ function gerarPDFCompleto(resultado, logoData) {
   lb("Executado:", resultado.alimentante, c2, y);
   y += 8;
   var tl = resultado.tipoAlimento==="sm"
-    ? resultado.percentualSM+"% do salário mínimo federal"
-    : fmt(parseMoney(resultado.valorFixoAlimento||"0"))+" (valor fixo)";
+    ? (resultado.percentualSM ? resultado.percentualSM+"% do salário mínimo federal" : "não informado")
+    : (resultado.valorFixoAlimento ? fmt(parseMoney(resultado.valorFixoAlimento))+" (valor fixo)" : "não informado");
   lb("Alimentos fixados:", tl, c1, y);
   lb("Vencimento:", "Dia "+resultado.diaVencimento, c2, y);
   lb("Índice:", labelIndicePDF(resultado.indice), c3, y);
@@ -812,11 +812,13 @@ function gerarPDFAtuPenhora(dados, logoData) {
   doc.text(hdP[6], W-mg-2, y+3, {align:"right"});
   y += 8;
 
+  var temPgtos = dados.logPagamentos && dados.logPagamentos.length > 0;
+  var ultimoPgto = temPgtos ? dados.logPagamentos[dados.logPagamentos.length-1] : null;
   doc.setFillColor(248,250,248); doc.rect(mg,y-2,W-mg*2,7,"F");
   doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-  doc.text("Saldo atualizado", cxP[0], y+3);
-  doc.text(dados.dataRef, cxP[1], y+3);
-  doc.text(fmt(dados.valorRef), cxP[2], y+3);
+  doc.text(temPgtos ? "Saldo após pagamentos" : "Saldo atualizado", cxP[0], y+3);
+  doc.text(temPgtos ? ultimoPgto.label : dados.dataRef, cxP[1], y+3);
+  doc.text(fmt(temPgtos ? dados.saldoEntrada : dados.valorRef), cxP[2], y+3);
   doc.text(dados.fator.toFixed(6), cxP[3], y+3);
   doc.text(fmt(dados.corrigido), cxP[4], y+3);
   doc.text(dados.indice==="selic" ? "-" : fmt(dados.juros), cxP[5], y+3);
@@ -829,7 +831,7 @@ function gerarPDFAtuPenhora(dados, logoData) {
     doc.setDrawColor(26,82,118); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,7);
     doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8);
     doc.setFillColor(26,82,118); doc.rect(mg,y,W-mg*2,7,"F");
-    doc.text("PAGAMENTOS IMPUTADOS NO PERÍODO", mg+3, y+5);
+    doc.text("PAGAMENTOS IMPUTADOS NO PERÍODO — Valor de referência: "+fmt(dados.valorRef)+" em "+dados.dataRef, mg+3, y+5);
     y += 9;
     doc.setFillColor(220,220,220); doc.rect(mg,y-2,W-mg*2,6,"F");
     doc.setTextColor(40,40,40); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
@@ -851,7 +853,7 @@ function gerarPDFAtuPenhora(dados, logoData) {
     });
     doc.setFillColor(26,82,118); doc.rect(mg,y,W-mg*2,6,"F");
     doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8);
-    doc.text("Saldo após pagamentos: "+fmt(dados.saldoEntrada)+"   →   Correção final até "+dados.dataBase+": "+fmt(dados.total), mg+3, y+4);
+    doc.text("Saldo após pagamentos: "+fmt(dados.saldoEntrada)+" — corrigido até "+dados.dataBase+": "+fmt(dados.total), mg+3, y+4);
     y += 12;
   }
 
