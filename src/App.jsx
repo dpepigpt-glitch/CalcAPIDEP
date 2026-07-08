@@ -1850,6 +1850,142 @@ function TabAtualizacao(props) {
   );
 }
 
+// ===================== ABA: COMO USAR (TUTORIAL) =====================
+
+function TabTutorial() {
+  var h2 = { margin:"0 0 6px", color:C.verde, fontSize:16 };
+  var quando = { background:C.verdePale, border:"1px solid "+C.verde, borderRadius:8, padding:"10px 14px", margin:"10px 0", fontSize:13, color:"#2d4a40", lineHeight:1.6 };
+  var p = { fontSize:13, color:"#444", lineHeight:1.7, margin:"8px 0" };
+  var ol = { fontSize:13, color:"#444", lineHeight:1.9, margin:"8px 0", paddingLeft:22 };
+  var ul = { fontSize:13, color:"#444", lineHeight:1.8, margin:"8px 0", paddingLeft:20 };
+  var tag = function(texto, cor) {
+    return <span style={{ background:cor||C.verde, color:"#fff", borderRadius:12, padding:"2px 10px", fontSize:11, fontWeight:700, marginRight:8, whiteSpace:"nowrap" }}>{texto}</span>;
+  };
+  return (
+    <div>
+      <Card>
+        <h2 style={h2}>{"Bem-vindo(a) à Calculadora de Débitos Alimentares"}</h2>
+        <p style={p}>
+          {"A calculadora elabora, em segundos, memoriais de cálculo prontos para juntar aos autos de execução de alimentos (art. 528 do CPC). O fluxo é sempre o mesmo:"}
+        </p>
+        <ol style={ol}>
+          <li>{"Identifique-se na abertura (nome e Defensoria — é o que assina o fim de cada PDF);"}</li>
+          <li>{"Escolha a modalidade de cálculo na aba correspondente;"}</li>
+          <li>{"Preencha os dados do processo e as parcelas ou o saldo;"}</li>
+          <li>{"Clique em Calcular, confira o resultado na tela e clique em Gerar PDF."}</li>
+        </ol>
+        <p style={p}>
+          {"Os índices oficiais (IPCA-E, SELIC e salário mínimo) são baixados automaticamente do Banco Central ao abrir o sistema — a faixa verde no topo confirma a atualização e informa até que mês há índice publicado."}
+        </p>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Os dois índices de atualização"}</h2>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12 }}>
+          <div style={{ border:"2px solid "+C.verde, borderRadius:8, padding:14 }}>
+            <div style={{ fontWeight:800, color:C.verde, marginBottom:6 }}>{"IPCA-E"}</div>
+            <div style={{ fontSize:12.5, color:"#444", lineHeight:1.7 }}>
+              {"Correção monetária pelo IPCA-E (IBGE) acrescida de juros de mora de 1% ao mês (art. 406 CC c/c art. 161, §1º, CTN). O PDF demonstra correção e juros em colunas separadas."}
+            </div>
+          </div>
+          <div style={{ border:"2px solid "+C.azul, borderRadius:8, padding:14 }}>
+            <div style={{ fontWeight:800, color:C.azul, marginBottom:6 }}>{"SELIC"}</div>
+            <div style={{ fontSize:12.5, color:"#444", lineHeight:1.7 }}>
+              {"Taxa SELIC acumulada mensal como fator único de atualização. Não incidem juros de mora — vedação legal, pois a taxa já engloba correção e juros (art. 406 CC c/c Lei 9.250/95)."}
+            </div>
+          </div>
+        </div>
+        <p style={p}>{"A escolha aparece em todas as modalidades, no quadro “Índice de Correção e Juros”. Adote o critério fixado pelo juízo da execução ou o entendimento da sua prática."}</p>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Modalidade 1 — Novo Cálculo (memorial completo)"}</h2>
+        <div style={quando}>
+          <b>{"Quando usar: "}</b>{"ao ajuizar ou atualizar uma execução calculando parcela por parcela desde o início. O sistema separa automaticamente as últimas 3 parcelas (rito da prisão civil, art. 528, §3º) das anteriores (rito da penhora, art. 528, §8º)."}
+        </div>
+        <ol style={ol}>
+          <li>{"Preencha número do processo (a máscara CNJ é aplicada sozinha), vara/comarca, exequente e executado;"}</li>
+          <li>{"Informe como os alimentos foram fixados: percentual do salário mínimo (o sistema busca o SM vigente de cada competência, inclusive nos anos com dois valores) ou valor fixo em reais;"}</li>
+          <li>{"Informe o dia de vencimento e escolha o índice;"}</li>
+          <li>{"Lance as parcelas em atraso (veja as ferramentas abaixo) e, se houve pagamentos parciais, preencha a coluna Pago;"}</li>
+          <li>{"Clique em Calcular Débito e depois em Gerar PDF."}</li>
+        </ol>
+        <p style={p}>
+          {"O PDF traz os dados do processo, a demonstração parcela a parcela (salário mínimo vigente, valor nominal, pagamentos, fator de correção, juros e total), os dois blocos com subtotais e a sua assinatura."}
+        </p>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Modalidade 2 — Atualização de Débito · Rito da Penhora"}</h2>
+        <div style={quando}>
+          <b>{"Quando usar: "}</b>{"quando já existe um valor consolidado nos autos (última atualização judicial, cálculo da contadoria ou da parte contrária) e é preciso apenas trazê-lo a valor presente — típico da fase de expropriação (art. 528, §8º, CPC)."}
+        </div>
+        <ol style={ol}>
+          <li>{"Na aba Atualização de Débito, mantenha selecionado “Atualizar — Rito da Penhora”;"}</li>
+          <li>{"Preencha os dados do processo e o índice;"}</li>
+          <li>{"Informe o Valor de Referência e o mês/ano a que ele se refere;"}</li>
+          <li>{"Se o devedor pagou algo depois dessa data, cadastre cada pagamento (botão + Pagamento): o sistema corrige o saldo até a data de cada pagamento, abate o valor e segue corrigindo o restante;"}</li>
+          <li>{"Se for o caso, aplique Multa por Atraso e/ou Honorários Advocatícios (percentuais sobre o valor atualizado);"}</li>
+          <li>{"Calcule e gere o PDF."}</li>
+        </ol>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Modalidade 3 — Atualização de Débito · Rito da Prisão Civil"}</h2>
+        <div style={quando}>
+          <b>{"Quando usar: "}</b>{"para atualizar as parcelas que tramitam pelo rito da prisão civil (art. 528, §3º, CPC) — em regra as vencidas após a distribuição, que continuam vencendo no curso da execução. Todas as parcelas lançadas aqui ficam no mesmo rito."}
+        </div>
+        <ol style={ol}>
+          <li>{"Na aba Atualização de Débito, selecione “Atualizar — Rito da Prisão Civil”;"}</li>
+          <li>{"Preencha os dados do processo, como os alimentos foram fixados e o dia de vencimento;"}</li>
+          <li>{"Lance as parcelas (individualmente ou por intervalo) com eventuais pagamentos;"}</li>
+          <li>{"Aplique multa/honorários se necessário, calcule e gere o PDF."}</li>
+        </ol>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Ferramentas de lançamento de parcelas"}</h2>
+        <ul style={{ listStyle:"none", padding:0, margin:"12px 0 0" }}>
+          {[
+            ["Intervalo", C.azul, "Gera várias parcelas de uma vez (ex.: Jan/2024 a Jun/2026). Se os alimentos forem em % do salário mínimo, cada parcela já sai com o valor certo do SM da respectiva competência; é possível informar um valor pago padrão para todas."],
+            ["+ Avulsa", C.verdeClaro, "Acrescenta uma parcela isolada para preencher manualmente — útil para meses fora do intervalo ou valores diferentes."],
+            ["Limpar", C.vermelho, "Apaga todas as parcelas lançadas (pede confirmação)."],
+            ["Pago (R$)", C.laranja, "Valor pago naquela competência. O sistema corrige cada parcela até a data do pagamento e imputa o valor nas parcelas mais antigas (art. 354 CC), documentando tudo no PDF."],
+            ["Incluir 13º", C.laranja, "Gera automaticamente a parcela de 13º ao final de cada ano lançado, pela média das parcelas do ano, com vencimento em dezembro."],
+            ["Justificativa", C.cinza, "Texto livre que aparece no PDF — use para registrar a origem do cálculo, decisões que o embasam etc."],
+            ["Multa / Honorários", C.cinza, "Percentuais aplicados sobre o total atualizado nas modalidades de atualização; o PDF demonstra a composição final."]
+          ].map(function(item, i){
+            return (
+              <li key={i} style={{ display:"flex", alignItems:"flex-start", gap:4, padding:"8px 0", borderBottom:"1px solid #eee", fontSize:13, color:"#444", lineHeight:1.6 }}>
+                <span style={{ flexShrink:0, paddingTop:1 }}>{tag(item[0], item[1])}</span>
+                <span>{item[2]}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Histórico: editar e reimprimir"}</h2>
+        <p style={p}>
+          {"Todo cálculo fica guardado na aba Histórico (neste navegador). O botão Editar restaura o formulário completo — altere o que precisar, recalcule e gere um novo PDF. O PDF em si não é editável depois de pronto: qualquer ajuste é feito nos dados e o documento é gerado novamente, com a data-base do dia."}
+        </p>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>{"Dicas rápidas"}</h2>
+        <ul style={ul}>
+          <li>{"O número do processo ganha a máscara CNJ automaticamente — digite apenas os números;"}</li>
+          <li>{"Nomes e comarcas são capitalizados sozinhos (primeira letra de cada palavra);"}</li>
+          <li>{"A assinatura do PDF vem da identificação da abertura — para trocar, clique no seu nome no topo ou em Sair;"}</li>
+          <li>{"Sem conexão com o Banco Central, o sistema usa a tabela interna de contingência e avisa em amarelo até que mês há índice — confira antes de protocolar;"}</li>
+          <li>{"Encontrou inconsistência ou tem sugestão? O sistema é colaborativo — encaminhe à APIDEP."}</li>
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
 // ===================== APP PRINCIPAL =====================
 
 export default function App() {
@@ -2106,7 +2242,8 @@ function AppInterno(props) {
         {[
           ["calc","Novo Cálculo"],
           ["atualizar","Atualização de Débito"],
-          ["historico","Histórico"]
+          ["historico","Histórico"],
+          ["tutorial","Como Usar"]
         ].map(function(item){
           var id=item[0],label=item[1];
           return (
@@ -2382,6 +2519,8 @@ function AppInterno(props) {
             onSalvarHistorico={salvarHistorico}
           />
         )}
+
+        {tab==="tutorial" && <TabTutorial />}
 
         {tab==="historico" && (
           <Card>
