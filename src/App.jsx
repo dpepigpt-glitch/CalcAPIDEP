@@ -1,5 +1,5 @@
 // v5.0 APIDEP — SELIC + Atualização de Débito (penhora e prisão civil)
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { jsPDF } from "jspdf";
 
 var C = {
@@ -95,7 +95,7 @@ var SALARIO_MINIMO = {
   "2009-07":465,"2009-08":465,"2009-09":465,"2009-10":465,"2009-11":465,"2009-12":465,
   "2010-01":510,"2010-02":510,"2010-03":510,"2010-04":510,"2010-05":510,"2010-06":510,
   "2010-07":510,"2010-08":510,"2010-09":510,"2010-10":510,"2010-11":510,"2010-12":510,
-  "2011-01":545,"2011-02":545,"2011-03":545,"2011-04":545,"2011-05":545,"2011-06":545,
+  "2011-01":540,"2011-02":540,"2011-03":545,"2011-04":545,"2011-05":545,"2011-06":545,
   "2011-07":545,"2011-08":545,"2011-09":545,"2011-10":545,"2011-11":545,"2011-12":545,
   "2012-01":622,"2012-02":622,"2012-03":622,"2012-04":622,"2012-05":622,"2012-06":622,
   "2012-07":622,"2012-08":622,"2012-09":622,"2012-10":622,"2012-11":622,"2012-12":622,
@@ -113,7 +113,7 @@ var SALARIO_MINIMO = {
   "2018-07":954,"2018-08":954,"2018-09":954,"2018-10":954,"2018-11":954,"2018-12":954,
   "2019-01":998,"2019-02":998,"2019-03":998,"2019-04":998,"2019-05":998,"2019-06":998,
   "2019-07":998,"2019-08":998,"2019-09":998,"2019-10":998,"2019-11":998,"2019-12":998,
-  "2020-01":1045,"2020-02":1045,"2020-03":1045,"2020-04":1045,"2020-05":1045,"2020-06":1045,
+  "2020-01":1039,"2020-02":1045,"2020-03":1045,"2020-04":1045,"2020-05":1045,"2020-06":1045,
   "2020-07":1045,"2020-08":1045,"2020-09":1045,"2020-10":1045,"2020-11":1045,"2020-12":1045,
   "2021-01":1100,"2021-02":1100,"2021-03":1100,"2021-04":1100,"2021-05":1100,"2021-06":1100,
   "2021-07":1100,"2021-08":1100,"2021-09":1100,"2021-10":1100,"2021-11":1100,"2021-12":1100,
@@ -134,16 +134,59 @@ var getSM = function(m, a) {
 };
 
 var IPCA_E = {
-  "2022-01":0.54,"2022-02":0.58,"2022-03":1.05,"2022-04":1.06,"2022-05":0.81,"2022-06":0.68,
-  "2022-07":-0.07,"2022-08":-0.04,"2022-09":0.24,"2022-10":0.40,"2022-11":0.54,"2022-12":0.54,
-  "2023-01":0.53,"2023-02":0.39,"2023-03":0.17,"2023-04":0.23,"2023-05":0.22,"2023-06":0.06,
-  "2023-07":0.18,"2023-08":0.37,"2023-09":0.26,"2023-10":0.24,"2023-11":0.33,"2023-12":0.44,
-  "2024-01":0.42,"2024-02":0.40,"2024-03":0.36,"2024-04":0.38,"2024-05":0.40,"2024-06":0.39,
-  "2024-07":0.43,"2024-08":0.44,"2024-09":0.44,"2024-10":0.56,"2024-11":0.39,"2024-12":0.48,
-  "2025-01":0.16,"2025-02":1.31,"2025-03":0.56,"2025-04":0.43,"2025-05":0.26,"2025-06":0.24,
-  "2025-07":0.26,"2025-08":-0.11,"2025-09":0.48,"2025-10":0.09,"2025-11":-0.09,"2025-12":0.33,
-  "2026-01":0.33,"2026-02":0.70,"2026-03":0.88,"2026-04":0.89,"2026-05":0.62,"2026-06":0.31,
-  "2026-07":0.31,"2026-08":0.31,"2026-09":0.31,"2026-10":0.31,"2026-11":0.31,"2026-12":0.31
+  "2000-01":0.65,"2000-02":0.34,"2000-03":0.09,"2000-04":0.47,"2000-05":0.09,"2000-06":0.08,
+  "2000-07":0.78,"2000-08":1.99,"2000-09":0.45,"2000-10":0.18,"2000-11":0.17,"2000-12":0.6,
+  "2001-01":0.63,"2001-02":0.5,"2001-03":0.36,"2001-04":0.5,"2001-05":0.49,"2001-06":0.38,
+  "2001-07":0.94,"2001-08":1.18,"2001-09":0.38,"2001-10":0.37,"2001-11":0.99,"2001-12":0.55,
+  "2002-01":0.62,"2002-02":0.44,"2002-03":0.4,"2002-04":0.78,"2002-05":0.42,"2002-06":0.33,
+  "2002-07":0.77,"2002-08":1,"2002-09":0.62,"2002-10":0.9,"2002-11":2.08,"2002-12":3.05,
+  "2003-01":1.98,"2003-02":2.19,"2003-03":1.14,"2003-04":1.14,"2003-05":0.85,"2003-06":0.22,
+  "2003-07":-0.18,"2003-08":0.27,"2003-09":0.57,"2003-10":0.66,"2003-11":0.17,"2003-12":0.46,
+  "2004-01":0.68,"2004-02":0.9,"2004-03":0.4,"2004-04":0.21,"2004-05":0.54,"2004-06":0.56,
+  "2004-07":0.93,"2004-08":0.79,"2004-09":0.49,"2004-10":0.32,"2004-11":0.63,"2004-12":0.84,
+  "2005-01":0.68,"2005-02":0.74,"2005-03":0.35,"2005-04":0.74,"2005-05":0.83,"2005-06":0.12,
+  "2005-07":0.11,"2005-08":0.28,"2005-09":0.16,"2005-10":0.56,"2005-11":0.78,"2005-12":0.38,
+  "2006-01":0.51,"2006-02":0.52,"2006-03":0.37,"2006-04":0.17,"2006-05":0.27,"2006-06":-0.15,
+  "2006-07":-0.02,"2006-08":0.19,"2006-09":0.05,"2006-10":0.29,"2006-11":0.37,"2006-12":0.35,
+  "2007-01":0.52,"2007-02":0.46,"2007-03":0.41,"2007-04":0.22,"2007-05":0.26,"2007-06":0.29,
+  "2007-07":0.24,"2007-08":0.42,"2007-09":0.29,"2007-10":0.24,"2007-11":0.23,"2007-12":0.7,
+  "2008-01":0.7,"2008-02":0.64,"2008-03":0.23,"2008-04":0.59,"2008-05":0.56,"2008-06":0.9,
+  "2008-07":0.63,"2008-08":0.35,"2008-09":0.26,"2008-10":0.3,"2008-11":0.49,"2008-12":0.29,
+  "2009-01":0.4,"2009-02":0.63,"2009-03":0.11,"2009-04":0.36,"2009-05":0.59,"2009-06":0.38,
+  "2009-07":0.22,"2009-08":0.23,"2009-09":0.19,"2009-10":0.18,"2009-11":0.44,"2009-12":0.38,
+  "2010-01":0.52,"2010-02":0.94,"2010-03":0.55,"2010-04":0.48,"2010-05":0.63,"2010-06":0.19,
+  "2010-07":-0.09,"2010-08":-0.05,"2010-09":0.31,"2010-10":0.62,"2010-11":0.86,"2010-12":0.69,
+  "2011-01":0.76,"2011-02":0.97,"2011-03":0.6,"2011-04":0.77,"2011-05":0.7,"2011-06":0.23,
+  "2011-07":0.1,"2011-08":0.27,"2011-09":0.53,"2011-10":0.42,"2011-11":0.46,"2011-12":0.56,
+  "2012-01":0.65,"2012-02":0.53,"2012-03":0.25,"2012-04":0.43,"2012-05":0.51,"2012-06":0.18,
+  "2012-07":0.33,"2012-08":0.39,"2012-09":0.48,"2012-10":0.65,"2012-11":0.54,"2012-12":0.69,
+  "2013-01":0.88,"2013-02":0.68,"2013-03":0.49,"2013-04":0.51,"2013-05":0.46,"2013-06":0.38,
+  "2013-07":0.07,"2013-08":0.16,"2013-09":0.27,"2013-10":0.48,"2013-11":0.57,"2013-12":0.75,
+  "2014-01":0.67,"2014-02":0.7,"2014-03":0.73,"2014-04":0.78,"2014-05":0.58,"2014-06":0.47,
+  "2014-07":0.17,"2014-08":0.14,"2014-09":0.39,"2014-10":0.48,"2014-11":0.38,"2014-12":0.79,
+  "2015-01":0.89,"2015-02":1.33,"2015-03":1.24,"2015-04":1.07,"2015-05":0.6,"2015-06":0.99,
+  "2015-07":0.59,"2015-08":0.43,"2015-09":0.39,"2015-10":0.66,"2015-11":0.85,"2015-12":1.18,
+  "2016-01":0.92,"2016-02":1.42,"2016-03":0.43,"2016-04":0.51,"2016-05":0.86,"2016-06":0.4,
+  "2016-07":0.54,"2016-08":0.45,"2016-09":0.23,"2016-10":0.19,"2016-11":0.26,"2016-12":0.19,
+  "2017-01":0.31,"2017-02":0.54,"2017-03":0.15,"2017-04":0.21,"2017-05":0.24,"2017-06":0.16,
+  "2017-07":-0.18,"2017-08":0.35,"2017-09":0.11,"2017-10":0.34,"2017-11":0.32,"2017-12":0.35,
+  "2018-01":0.39,"2018-02":0.38,"2018-03":0.1,"2018-04":0.21,"2018-05":0.14,"2018-06":1.11,
+  "2018-07":0.64,"2018-08":0.13,"2018-09":0.09,"2018-10":0.58,"2018-11":0.19,"2018-12":-0.16,
+  "2019-01":0.3,"2019-02":0.34,"2019-03":0.54,"2019-04":0.72,"2019-05":0.35,"2019-06":0.06,
+  "2019-07":0.09,"2019-08":0.08,"2019-09":0.09,"2019-10":0.09,"2019-11":0.14,"2019-12":1.05,
+  "2020-01":0.71,"2020-02":0.22,"2020-03":0.02,"2020-04":-0.01,"2020-05":-0.59,"2020-06":0.02,
+  "2020-07":0.3,"2020-08":0.23,"2020-09":0.45,"2020-10":0.94,"2020-11":0.81,"2020-12":1.06,
+  "2021-01":0.78,"2021-02":0.48,"2021-03":0.93,"2021-04":0.6,"2021-05":0.44,"2021-06":0.83,
+  "2021-07":0.72,"2021-08":0.89,"2021-09":1.14,"2021-10":1.2,"2021-11":1.17,"2021-12":0.78,
+  "2022-01":0.58,"2022-02":0.99,"2022-03":0.95,"2022-04":1.73,"2022-05":0.59,"2022-06":0.69,
+  "2022-07":0.13,"2022-08":-0.73,"2022-09":-0.37,"2022-10":0.16,"2022-11":0.53,"2022-12":0.52,
+  "2023-01":0.55,"2023-02":0.76,"2023-03":0.69,"2023-04":0.57,"2023-05":0.51,"2023-06":0.04,
+  "2023-07":-0.07,"2023-08":0.28,"2023-09":0.35,"2023-10":0.21,"2023-11":0.33,"2023-12":0.4,
+  "2024-01":0.31,"2024-02":0.78,"2024-03":0.36,"2024-04":0.21,"2024-05":0.44,"2024-06":0.39,
+  "2024-07":0.3,"2024-08":0.19,"2024-09":0.13,"2024-10":0.54,"2024-11":0.62,"2024-12":0.34,
+  "2025-01":0.11,"2025-02":1.23,"2025-03":0.64,"2025-04":0.43,"2025-05":0.36,"2025-06":0.26,
+  "2025-07":0.33,"2025-08":-0.14,"2025-09":0.48,"2025-10":0.18,"2025-11":0.2,"2025-12":0.25,
+  "2026-01":0.2,"2026-02":0.84,"2026-03":0.44,"2026-04":0.89,"2026-05":0.62,"2026-06":0.41
 };
 
 var SELIC = {
@@ -155,9 +198,85 @@ var SELIC = {
   "2024-07":0.83,"2024-08":0.83,"2024-09":0.83,"2024-10":0.96,"2024-11":1.00,"2024-12":1.07,
   "2025-01":1.07,"2025-02":1.07,"2025-03":1.16,"2025-04":1.07,"2025-05":1.07,"2025-06":1.07,
   "2025-07":1.07,"2025-08":1.07,"2025-09":1.07,"2025-10":1.07,"2025-11":1.07,"2025-12":1.07,
-  "2026-01":1.07,"2026-02":1.07,"2026-03":1.21,"2026-04":1.09,"2026-05":1.07,"2026-06":1.07,
-  "2026-07":1.07,"2026-08":1.07,"2026-09":1.07,"2026-10":1.07,"2026-11":1.07,"2026-12":1.07
+  "2026-01":1.07,"2026-02":1.07,"2026-03":1.21,"2026-04":1.09,"2026-05":1.07
 };
+
+// ===================== ÍNDICES OFICIAIS EM TEMPO REAL (BANCO CENTRAL) =====================
+// Séries do SGS/BCB: 1619 = salário mínimo vigente; 7478 = IPCA-15 (variação mensal, base do
+// IPCA-E); 4390 = SELIC acumulada no mês (% a.m.). Os dados oficiais são mesclados por cima
+// das tabelas internas acima, que passam a servir apenas de contingência offline.
+
+var FONTE_INDICES = { online: false };
+
+function ultimaChave(obj) {
+  var ks = Object.keys(obj).sort();
+  return ks.length ? ks[ks.length - 1] : null;
+}
+
+function fmtChaveMes(k) {
+  if (!k) return "-";
+  var p = k.split("-");
+  return p[1] + "/" + p[0];
+}
+
+function aplicarSerieBCB(dados, alvo) {
+  dados.forEach(function(item) {
+    var v = parseFloat(item.valor);
+    if (isNaN(v)) return;
+    var p = item.data.split("/"); // "dd/mm/aaaa"
+    alvo[p[2] + "-" + p[1]] = v;
+  });
+}
+
+function buscarSerieBCB(codigo) {
+  return fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs." + codigo + "/dados?formato=json&dataInicial=01/01/2000")
+    .then(function(r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+}
+
+var _promIndices = null;
+
+function atualizarIndicesOficiais() {
+  if (_promIndices) return _promIndices;
+  var CACHE_KEY = "dpe_indices_bcb";
+  var UM_DIA = 24 * 60 * 60 * 1000;
+  var aplicar = function(sm, ipca, selic) {
+    aplicarSerieBCB(sm, SALARIO_MINIMO);
+    aplicarSerieBCB(ipca, IPCA_E);
+    aplicarSerieBCB(selic, SELIC);
+    FONTE_INDICES.online = true;
+  };
+  try {
+    var cache = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+    if (cache && (Date.now() - cache.ts) < UM_DIA && cache.sm && cache.ipca && cache.selic) {
+      aplicar(cache.sm, cache.ipca, cache.selic);
+      _promIndices = Promise.resolve(FONTE_INDICES);
+      return _promIndices;
+    }
+  } catch(e){}
+  _promIndices = Promise.all([buscarSerieBCB(1619), buscarSerieBCB(7478), buscarSerieBCB(4390)])
+    .then(function(res) {
+      aplicar(res[0], res[1], res[2]);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), sm: res[0], ipca: res[1], selic: res[2] })); } catch(e){}
+      return FONTE_INDICES;
+    })
+    .catch(function() {
+      FONTE_INDICES.online = false;
+      _promIndices = null; // permite nova tentativa no próximo carregamento
+      return FONTE_INDICES;
+    });
+  return _promIndices;
+}
+
+function notaCobertura(indice) {
+  var ate = fmtChaveMes(ultimaChave(indice === "selic" ? SELIC : IPCA_E));
+  var fonte = FONTE_INDICES.online
+    ? "índices oficiais obtidos do Banco Central do Brasil (SGS)"
+    : "tabela interna de contingência";
+  if (indice === "selic") {
+    return "Atualização pela taxa SELIC acumulada mensal — " + fonte + ", índices até " + ate + ". Para meses posteriores ainda não publicados, repete-se a última taxa mensal disponível, sujeita a revisão.";
+  }
+  return "Correção monetária pelo IPCA-E (IBGE) — " + fonte + ", índices até " + ate + ". Meses posteriores ainda não publicados não sofrem correção.";
+}
 
 function corrigirAteIPCA(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
   var fator = 1;
@@ -182,10 +301,11 @@ function corrigirAteIPCA(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
 
 function corrigirAteSELIC(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
   var fator = 1;
+  var ultimaTx = SELIC[ultimaChave(SELIC)] || 1.07;
   var m = mesVenc; var a = anoVenc;
   while (a < anoAlvo || (a === anoAlvo && m < mesAlvo)) {
     var k = a + "-" + String(m).padStart(2,"0");
-    var tx = SELIC[k] !== undefined ? SELIC[k] : 1.07;
+    var tx = SELIC[k] !== undefined ? SELIC[k] : ultimaTx;
     fator *= (1 + tx / 100);
     m++; if (m > 12) { m = 1; a++; }
   }
@@ -367,11 +487,9 @@ function SeletorIndice(props) {
           );
         })}
       </div>
-      {indice === "selic" && (
-        <div style={{ marginTop:8, background:"#fff8e1", border:"1px solid #f0c040", borderRadius:6, padding:"8px 12px", fontSize:11, color:"#7a6000" }}>
-          {"SELIC: índices oficiais até mai/2026. A partir de jun/2026: projeção de 1,07% a.m. Sujeito a revisão quando publicados os valores definitivos."}
-        </div>
-      )}
+      <div style={{ marginTop:8, background:FONTE_INDICES.online?C.verdePale:"#fff8e1", border:"1px solid "+(FONTE_INDICES.online?C.verde:"#f0c040"), borderRadius:6, padding:"8px 12px", fontSize:11, color:FONTE_INDICES.online?C.verde:"#7a6000" }}>
+        {notaCobertura(indice)}
+      </div>
     </div>
   );
 }
@@ -593,13 +711,13 @@ function gerarPDFCompleto(resultado, logoData) {
   doc.text("Observações:", mg, y); y += 5;
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
   var obsLines = resultado.indice === "selic" ? [
-    "1. Atualização pela taxa SELIC acumulada mensal (substitui correção monetária e juros de mora). Índices oficiais até mai/2026. A partir de jun/2026: projeção de 1,07% a.m. Sujeito a revisão.",
+    "1. " + notaCobertura("selic"),
     "2. SELIC como fator único de atualização do débito alimentar (art. 406 CC c/c Lei 9.250/95).",
     "3. Bloco 1 (art. 528, §3º, CPC): últimas 3 parcelas — execução pelo rito da prisão civil.",
     "4. Bloco 2 (art. 528, §8º, CPC): parcelas anteriores — execução pelo rito da penhora.",
     "5. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
   ] : [
-    "1. Correção monetária pelo IPCA (IBGE). Índices oficiais até mai/2026. A partir de jun/2026: projeção de 0,31% a.m. Sujeito a revisão quando publicados os índices definitivos.",
+    "1. " + notaCobertura("ipca"),
     "2. Juros de mora: 1% ao mês, pro rata die, sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN).",
     "3. Bloco 1 (art. 528, §3º, CPC): últimas 3 parcelas — execução pelo rito da prisão civil.",
     "4. Bloco 2 (art. 528, §8º, CPC): parcelas anteriores — execução pelo rito da penhora.",
@@ -766,12 +884,12 @@ function gerarPDFAtuPenhora(dados, logoData) {
   var obs = dados.indice === "selic" ? [
     "1. Atualização pela taxa SELIC acumulada mensal, contada a partir da data de referência até a data-base do cálculo.",
     "2. A SELIC substitui a correção monetária e os juros de mora (art. 406 CC c/c Lei 9.250/95).",
-    "3. Índices SELIC oficiais até mai/2026. A partir de jun/2026: projeção de 1,07% a.m. Sujeito a revisão.",
+    "3. " + notaCobertura("selic"),
     "4. Rito da penhora (expropriação) — art. 528, §8º, CPC."
   ] : [
     "1. Correção monetária pelo IPCA-E (IBGE), contada a partir da data de referência até a data-base do cálculo.",
     "2. Juros de mora: 1% ao mês sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN).",
-    "3. Índices oficiais até mai/2026. A partir de jun/2026: projeção de 0,31% a.m. Sujeito a revisão.",
+    "3. " + notaCobertura("ipca"),
     "4. Rito da penhora (expropriação) — art. 528, §8º, CPC."
   ];
   obs.forEach(function(o){ doc.text(o,mg,y); y+=4.5; });
@@ -944,12 +1062,12 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   doc.text("Observações:", mg, y); y+=5;
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
   var obsP = resultado.indice==="selic" ? [
-    "1. Atualização pela taxa SELIC acumulada mensal (índices oficiais até mai/2026; projeção 1,07% a.m. a partir de jun/2026).",
+    "1. " + notaCobertura("selic"),
     "2. A SELIC substitui a correção monetária e os juros de mora (art. 406 CC c/c Lei 9.250/95).",
     "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
     "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
   ] : [
-    "1. Correção monetária pelo IPCA-E (IBGE). Índices oficiais até mai/2026. A partir de jun/2026: projeção de 0,31% a.m.",
+    "1. " + notaCobertura("ipca"),
     "2. Juros de mora: 1% ao mês, pro rata die, sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN).",
     "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
     "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
@@ -1742,6 +1860,13 @@ function AppInterno(props) {
   var _sp = useState(false); var showPerfil = _sp[0]; var setShowPerfil = _sp[1];
   var _st = useState("calc"); var tab = _st[0]; var setTab = _st[1];
 
+  var _ix = useState("carregando"); var statusIndices = _ix[0]; var setStatusIndices = _ix[1];
+  useEffect(function(){
+    atualizarIndicesOficiais().then(function(f){
+      setStatusIndices(f.online ? "online" : "offline");
+    });
+  }, []);
+
   var _sh = useState(function(){
     try{return JSON.parse(localStorage.getItem("dpe_historico")||"[]");} catch(e){return [];}
   }); var historico = _sh[0]; var setHistorico = _sh[1];
@@ -1973,6 +2098,22 @@ function AppInterno(props) {
       </div>
 
       <div style={{ maxWidth:900, margin:"0 auto", padding:"24px 16px" }}>
+
+        {statusIndices === "carregando" && (
+          <div style={{ background:"#f0f2f0", border:"1px solid "+C.borda, borderRadius:8, padding:"8px 14px", marginBottom:16, fontSize:12, color:"#777" }}>
+            {"Atualizando índices oficiais (Banco Central do Brasil)..."}
+          </div>
+        )}
+        {statusIndices === "online" && (
+          <div style={{ background:C.verdePale, border:"1px solid "+C.verde, borderRadius:8, padding:"8px 14px", marginBottom:16, fontSize:12, color:C.verde }}>
+            {"✓ Índices oficiais do Banco Central carregados — IPCA-E até "+fmtChaveMes(ultimaChave(IPCA_E))+" · SELIC até "+fmtChaveMes(ultimaChave(SELIC))+" · salário mínimo vigente "+fmt(getSM(new Date().getMonth()+1, new Date().getFullYear()))}
+          </div>
+        )}
+        {statusIndices === "offline" && (
+          <div style={{ background:"#fff8e1", border:"1px solid #f0c040", borderRadius:8, padding:"8px 14px", marginBottom:16, fontSize:12, color:"#7a6000" }}>
+            {"⚠ Sem conexão com o Banco Central. Usando tabela interna de contingência — IPCA-E até "+fmtChaveMes(ultimaChave(IPCA_E))+", SELIC até "+fmtChaveMes(ultimaChave(SELIC))+". Confira os índices antes de protocolar."}
+          </div>
+        )}
 
         {tab==="calc" && (
           <div>
