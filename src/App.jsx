@@ -189,6 +189,17 @@ var IPCA_E = {
   "2026-01":0.2,"2026-02":0.84,"2026-03":0.44,"2026-04":0.89,"2026-05":0.62,"2026-06":0.41
 };
 
+// IPCA (cheio, IBGE) — usado na correção a partir de set/2024 pela regra da Lei 14.905/2024
+// (art. 389 CC). Tabela interna de contingência; os valores oficiais vêm do BCB (SGS 433).
+var IPCA = {
+  "2024-09":0.44,"2024-10":0.56,"2024-11":0.39,"2024-12":0.52,
+  "2025-01":0.16,"2025-02":1.31,"2025-03":0.56,"2025-04":0.43,"2025-05":0.26,"2025-06":0.24,
+  "2025-07":0.26,"2025-08":-0.11,"2025-09":0.48,"2025-10":0.09
+};
+
+// Primeiro mês cheio sob a Lei 14.905/2024 (vigência 30/08/2024)
+var LEI_14905_INICIO = "2024-09";
+
 var SELIC = {
   "2022-01":0.73,"2022-02":0.76,"2022-03":0.93,"2022-04":0.83,"2022-05":1.03,"2022-06":1.03,
   "2022-07":1.03,"2022-08":1.07,"2022-09":1.07,"2022-10":1.07,"2022-11":1.07,"2022-12":1.07,
@@ -237,26 +248,27 @@ var _promIndices = null;
 
 function atualizarIndicesOficiais() {
   if (_promIndices) return _promIndices;
-  var CACHE_KEY = "dpe_indices_bcb";
+  var CACHE_KEY = "dpe_indices_bcb_v2";
   var UM_DIA = 24 * 60 * 60 * 1000;
-  var aplicar = function(sm, ipca, selic) {
+  var aplicar = function(sm, ipca15, selic, ipca) {
     aplicarSerieBCB(sm, SALARIO_MINIMO);
-    aplicarSerieBCB(ipca, IPCA_E);
+    aplicarSerieBCB(ipca15, IPCA_E);
     aplicarSerieBCB(selic, SELIC);
+    aplicarSerieBCB(ipca, IPCA);
     FONTE_INDICES.online = true;
   };
   try {
     var cache = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (cache && (Date.now() - cache.ts) < UM_DIA && cache.sm && cache.ipca && cache.selic) {
-      aplicar(cache.sm, cache.ipca, cache.selic);
+    if (cache && (Date.now() - cache.ts) < UM_DIA && cache.sm && cache.ipca15 && cache.selic && cache.ipca) {
+      aplicar(cache.sm, cache.ipca15, cache.selic, cache.ipca);
       _promIndices = Promise.resolve(FONTE_INDICES);
       return _promIndices;
     }
   } catch(e){}
-  _promIndices = Promise.all([buscarSerieBCB(1619), buscarSerieBCB(7478), buscarSerieBCB(4390)])
+  _promIndices = Promise.all([buscarSerieBCB(1619), buscarSerieBCB(7478), buscarSerieBCB(4390), buscarSerieBCB(433)])
     .then(function(res) {
-      aplicar(res[0], res[1], res[2]);
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), sm: res[0], ipca: res[1], selic: res[2] })); } catch(e){}
+      aplicar(res[0], res[1], res[2], res[3]);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), sm: res[0], ipca15: res[1], selic: res[2], ipca: res[3] })); } catch(e){}
       return FONTE_INDICES;
     })
     .catch(function() {
@@ -269,18 +281,25 @@ function atualizarIndicesOficiais() {
 
 function labelIndicePDF(indice) {
   if (indice === "selic") return "SELIC (índice até " + fmtChaveMes(ultimaChave(SELIC)) + ")";
-  return "IPCA-E (índice até " + fmtChaveMes(ultimaChave(IPCA_E)) + ")";
+  if (indice === "ipca") return "IPCA-E (índice até " + fmtChaveMes(ultimaChave(IPCA_E)) + ")";
+  return "Tabela da Justiça Federal (índice até " + fmtChaveMes(ultimaChave(IPCA)) + ")";
 }
 
 function notaCobertura(indice) {
-  var ate = fmtChaveMes(ultimaChave(indice === "selic" ? SELIC : IPCA_E));
   var fonte = FONTE_INDICES.online
     ? "índices oficiais obtidos do Banco Central do Brasil (SGS)"
     : "tabela interna de contingência";
   if (indice === "selic") {
-    return "Atualização pela taxa SELIC acumulada mensal — " + fonte + ", índices até " + ate + ". Para meses posteriores ainda não publicados, repete-se a última taxa mensal disponível, sujeita a revisão.";
+    return "Atualização pela taxa SELIC acumulada mensal — " + fonte + ", índices até " + fmtChaveMes(ultimaChave(SELIC)) + ". Para meses posteriores ainda não publicados, repete-se a última taxa mensal disponível, sujeita a revisão.";
   }
-  return "Correção monetária pelo IPCA-E (IBGE) — " + fonte + ", índices até " + ate + ". Meses posteriores ainda não publicados não sofrem correção.";
+  if (indice === "ipca") {
+    return "Correção monetária pelo IPCA-E (IBGE) — " + fonte + ", índices até " + fmtChaveMes(ultimaChave(IPCA_E)) + ". Meses posteriores ainda não publicados não sofrem correção.";
+  }
+  return "Correção monetária conforme a tabela da Justiça Federal (Manual de Cálculos do CJF): IPCA-E (IBGE) até ago/2024 e IPCA (IBGE) a partir de set/2024 (art. 389 CC, Lei 14.905/2024) — " + fonte + ", índices até " + fmtChaveMes(ultimaChave(IPCA)) + ". Meses posteriores ainda não publicados não sofrem correção.";
+}
+
+function notaJurosJF() {
+  return "Juros de mora simples: 1% ao mês até ago/2024 (art. 406 CC, redação anterior, c/c art. 161, §1º, CTN) e, a partir de set/2024, pela Taxa Legal (art. 406, §1º, CC, incluído pela Lei 14.905/2024; Res. CMN 5.171/2024) — SELIC acumulada do mês anterior deduzida a variação do IPCA-15 do mês anterior, nunca inferior a zero, com acumulação simples das taxas mensais.";
 }
 
 function corrigirAteIPCA(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
@@ -326,9 +345,56 @@ function corrigirAteSELIC(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
   };
 }
 
+// Taxa Legal do mês (art. 406, §1º, CC — Lei 14.905/2024; Res. CMN 5.171/2024):
+// SELIC acumulada do mês anterior deduzida a variação do IPCA-15 do mês anterior,
+// nunca negativa. Retorna null quando ainda não há dado para o mês.
+function taxaLegal(mes, ano) {
+  var mAnt = mes - 1, aAnt = ano;
+  if (mAnt < 1) { mAnt = 12; aAnt--; }
+  var k = aAnt + "-" + String(mAnt).padStart(2, "0");
+  if (SELIC[k] === undefined || IPCA_E[k] === undefined) return null;
+  return Math.max(0, r2(SELIC[k] - IPCA_E[k]));
+}
+
+// Critério da tabela de correção monetária da Justiça Federal (Manual de Cálculos do CJF):
+// correção pelo IPCA-E até ago/2024 e pelo IPCA a partir de set/2024 (art. 389 CC);
+// juros de mora simples de 1% a.m. até ago/2024 e pela Taxa Legal a partir de set/2024.
+function corrigirAteJF(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo) {
+  var fator = 1;
+  var somaJuros = 0;
+  var ultimaTL = null;
+  var m = mesVenc; var a = anoVenc;
+  while (a < anoAlvo || (a === anoAlvo && m < mesAlvo)) {
+    var k = a + "-" + String(m).padStart(2,"0");
+    if (k >= LEI_14905_INICIO) {
+      if (IPCA[k] !== undefined) fator *= (1 + IPCA[k] / 100);
+      var tl = taxaLegal(m, a);
+      if (tl === null) tl = (ultimaTL !== null ? ultimaTL : 0);
+      ultimaTL = tl;
+      somaJuros += tl;
+    } else {
+      if (IPCA_E[k] !== undefined) fator *= (1 + IPCA_E[k] / 100);
+      somaJuros += 1;
+    }
+    m++; if (m > 12) { m = 1; a++; }
+  }
+  var meses = Math.max(0, (anoAlvo - anoVenc) * 12 + (mesAlvo - mesVenc));
+  var corrigido = r2(saldo * fator);
+  var juros = r2(corrigido * somaJuros / 100);
+  return {
+    fator: r2(fator * 1000000) / 1000000,
+    corrigido: corrigido,
+    juros: juros,
+    total: r2(corrigido + juros),
+    mesesAtraso: meses,
+    indiceLabel: "Tabela da Justiça Federal"
+  };
+}
+
 function corrigirAte(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo, indice) {
   if (indice === "selic") return corrigirAteSELIC(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo);
-  return corrigirAteIPCA(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo);
+  if (indice === "ipca") return corrigirAteIPCA(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo);
+  return corrigirAteJF(saldo, mesVenc, anoVenc, mesAlvo, anoAlvo);
 }
 
 function corrigir(saldo, mes, ano, indice) {
@@ -479,6 +545,7 @@ function SeletorIndice(props) {
       </label>
       <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
         {[
+          ["jf", "Justiça Federal (padrão)", "IPCA-E até ago/2024 e IPCA após; juros de 1% a.m. até ago/2024 e Taxa Legal após (Lei 14.905/2024)"],
           ["ipca", "IPCA-E", "Correção monetária pelo IPCA-E + juros de mora de 1% a.m."],
           ["selic", "SELIC", "Taxa SELIC acumulada — não incidem juros de mora (vedação legal)"]
         ].map(function(item){
@@ -629,8 +696,10 @@ function gerarPDFCompleto(resultado, logoData) {
   y += 8;
   if (resultado.indice === "ipca") {
     lb("Juros de mora:", "1% ao mês — art. 406 CC c/c art. 161, §1º, CTN", c1, y);
-  } else {
+  } else if (resultado.indice === "selic") {
     lb("Juros de mora:", "Não incidem — vedação legal: a SELIC já engloba correção monetária e juros", c1, y);
+  } else {
+    lb("Juros de mora:", "1% ao mês até ago/2024; Taxa Legal a partir de set/2024 (art. 406, §1º, CC — Lei 14.905/2024)", c1, y);
   }
   y += 10;
 
@@ -722,20 +791,22 @@ function gerarPDFCompleto(resultado, logoData) {
   doc.setTextColor(40,40,40); doc.setFont("helvetica","bold"); doc.setFontSize(8);
   doc.text("Observações:", mg, y); y += 5;
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
-  var obsLines = resultado.indice === "selic" ? [
-    "1. " + notaCobertura("selic"),
-    "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95).",
-    "3. Bloco 1 (art. 528, §3º, CPC): últimas 3 parcelas — execução pelo rito da prisão civil.",
-    "4. Bloco 2 (art. 528, §8º, CPC): parcelas anteriores — execução pelo rito da penhora.",
-    "5. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
-  ] : [
-    "1. " + notaCobertura("ipca"),
-    "2. Juros de mora: 1% ao mês, pro rata die, sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN).",
+  var obsJuros = resultado.indice === "selic"
+    ? "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95)."
+    : resultado.indice === "ipca"
+    ? "2. Juros de mora: 1% ao mês, pro rata die, sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN)."
+    : "2. " + notaJurosJF();
+  var obsLines = [
+    "1. " + notaCobertura(resultado.indice),
+    obsJuros,
     "3. Bloco 1 (art. 528, §3º, CPC): últimas 3 parcelas — execução pelo rito da prisão civil.",
     "4. Bloco 2 (art. 528, §8º, CPC): parcelas anteriores — execução pelo rito da penhora.",
     "5. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
   ];
-  obsLines.forEach(function(o){ if(y>190){doc.addPage();y=15;} doc.text(o,mg,y); y+=4.5; });
+  obsLines.forEach(function(o){
+    var ls = doc.splitTextToSize(o, W-mg*2);
+    ls.forEach(function(l){ if(y>190){doc.addPage();y=15;} doc.text(l,mg,y); y+=4.5; });
+  });
   y += 8;
 
   if(y>185){doc.addPage();y=15;}
@@ -799,8 +870,10 @@ function gerarPDFAtuPenhora(dados, logoData) {
   lb("Índice:", labelIndicePDF(dados.indice), c1, y);
   if (dados.indice === "ipca") {
     lb("Juros de mora:", "1% ao mês (art. 406 CC c/c art. 161, §1º, CTN)", c2, y);
-  } else {
+  } else if (dados.indice === "selic") {
     lb("Juros de mora:", "Não incidem — vedação legal (SELIC já engloba juros)", c2, y);
+  } else {
+    lb("Juros de mora:", "1% a.m. até ago/2024; Taxa Legal após (Lei 14.905/2024)", c2, y);
   }
   y += 12;
 
@@ -905,13 +978,21 @@ function gerarPDFAtuPenhora(dados, logoData) {
     "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95).",
     "3. " + notaCobertura("selic"),
     "4. Rito da penhora (expropriação) — art. 528, §8º, CPC."
-  ] : [
+  ] : dados.indice === "ipca" ? [
     "1. Correção monetária pelo IPCA-E (IBGE), contada a partir da data de referência até a data-base do cálculo.",
     "2. Juros de mora: 1% ao mês sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN).",
     "3. " + notaCobertura("ipca"),
     "4. Rito da penhora (expropriação) — art. 528, §8º, CPC."
+  ] : [
+    "1. Correção monetária contada a partir da data de referência até a data-base do cálculo, conforme a tabela da Justiça Federal.",
+    "2. " + notaJurosJF(),
+    "3. " + notaCobertura("jf"),
+    "4. Rito da penhora (expropriação) — art. 528, §8º, CPC."
   ];
-  obs.forEach(function(o){ doc.text(o,mg,y); y+=4.5; });
+  obs.forEach(function(o){
+    var ls = doc.splitTextToSize(o, W-mg*2);
+    ls.forEach(function(l){ if(y>190){doc.addPage();y=15;} doc.text(l,mg,y); y+=4.5; });
+  });
   if (dados.justificativa) {
     y += 4;
     doc.setFont("helvetica","bold"); doc.setFontSize(8);
@@ -981,8 +1062,10 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   lb("Vencimento:", "Dia "+resultado.diaVencimento, c2, y);
   if (resultado.indice === "ipca") {
     lb("Juros:", "1% a.m. (art. 406 CC)", c3, y);
-  } else {
+  } else if (resultado.indice === "selic") {
     lb("Juros:", "Não incidem (vedação legal)", c3, y);
+  } else {
+    lb("Juros:", "1% a.m.; Taxa Legal após ago/2024", c3, y);
   }
   y += 12;
 
@@ -1085,18 +1168,21 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   doc.setTextColor(40,40,40); doc.setFont("helvetica","bold"); doc.setFontSize(8);
   doc.text("Observações:", mg, y); y+=5;
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
-  var obsP = resultado.indice==="selic" ? [
-    "1. " + notaCobertura("selic"),
-    "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95).",
-    "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
-    "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
-  ] : [
-    "1. " + notaCobertura("ipca"),
-    "2. Juros de mora: 1% ao mês, pro rata die, sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN).",
+  var obsJurosP = resultado.indice === "selic"
+    ? "2. Não incidem juros de mora: a SELIC já engloba correção monetária e juros, sendo vedada a cumulação com outros índices ou juros (art. 406 CC c/c Lei 9.250/95)."
+    : resultado.indice === "ipca"
+    ? "2. Juros de mora: 1% ao mês, pro rata die, sobre o valor corrigido (art. 406 CC c/c art. 161, §1º, CTN)."
+    : "2. " + notaJurosJF();
+  var obsP = [
+    "1. " + notaCobertura(resultado.indice),
+    obsJurosP,
     "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
     "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
   ];
-  obsP.forEach(function(o){if(y>190){doc.addPage();y=15;}doc.text(o,mg,y);y+=4.5;});
+  obsP.forEach(function(o){
+    var ls = doc.splitTextToSize(o, W-mg*2);
+    ls.forEach(function(l){ if(y>190){doc.addPage();y=15;} doc.text(l,mg,y); y+=4.5; });
+  });
   y+=8;
 
   if(y>185){doc.addPage();y=15;}
@@ -1132,7 +1218,7 @@ function TabAtualizacao(props) {
   var _ali = useState(ini.alimentado || ""); var alimentado = _ali[0]; var setAlimentado = _ali[1];
   var _ali2 = useState(ini.alimentante || ""); var alimentante = _ali2[0]; var setAlimentante = _ali2[1];
   var _com = useState(ini.comarca || ""); var comarca = _com[0]; var setComarca = _com[1];
-  var _ind = useState(ini.indice || "ipca"); var indice = _ind[0]; var setIndice = _ind[1];
+  var _ind = useState(ini.indice || "jf"); var indice = _ind[0]; var setIndice = _ind[1];
   var _just = useState(ini.justificativa || ""); var justificativa = _just[0]; var setJustificativa = _just[1];
 
   var _vref = useState(ini.valorRef || ""); var valorRef = _vref[0]; var setValorRef = _vref[1];
@@ -1198,7 +1284,7 @@ function TabAtualizacao(props) {
     if (!valorRef || valorRefNum <= 0) { alert("Informe o valor de referência."); return; }
     var hoje = new Date();
     var mHoje = hoje.getMonth()+1, aHoje = hoje.getFullYear();
-    var labelIndice = indice==="selic" ? "SELIC" : "IPCA-E";
+    var labelIndice = indice==="selic" ? "SELIC" : indice==="ipca" ? "IPCA-E" : "Tabela da Justiça Federal";
     var dataBase = hoje.toLocaleDateString("pt-BR");
     var dataRef = MESES[mesRef-1]+"/"+anoRef;
 
@@ -1361,7 +1447,7 @@ function TabAtualizacao(props) {
       var justFinal=justificativa.trim();
       if(obsImp){if(justFinal)justFinal+="\n\n";justFinal+=obsImp;}
 
-      var labelIndice=indice==="selic"?"SELIC":"IPCA-E";
+      var labelIndice=indice==="selic"?"SELIC":indice==="ipca"?"IPCA-E":"Tabela da Justiça Federal";
       var multaValP = r2(total * parseMoney(multaPct) / 100);
       var honorariosValP = r2(total * parseMoney(honorariosPct) / 100);
       var totalGeralP = r2(total + multaValP + honorariosValP);
@@ -1593,14 +1679,14 @@ function TabAtualizacao(props) {
                   <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{"Correção final: "}{fmt(resPenhora.saldoEntrada)}{" → "}{fmt(resPenhora.total)}</div>
                 </div>
               )}
-              {resPenhora.indice === "ipca" && (
+              {resPenhora.indice !== "selic" && (
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
                   <div style={{ background:"#e8f0f8", borderRadius:6, padding:"10px 14px" }}>
-                    <div style={{ fontSize:11, color:C.azul }}>{"Valor Corrigido (IPCA-E)"}</div>
+                    <div style={{ fontSize:11, color:C.azul }}>{resPenhora.indice==="ipca"?"Valor Corrigido (IPCA-E)":"Valor Corrigido (Tabela JF)"}</div>
                     <div style={{ fontWeight:700, fontSize:14 }}>{fmt(resPenhora.corrigido)}</div>
                   </div>
                   <div style={{ background:"#e8f0f8", borderRadius:6, padding:"10px 14px" }}>
-                    <div style={{ fontSize:11, color:C.azul }}>{"Juros de Mora (1% a.m.)"}</div>
+                    <div style={{ fontSize:11, color:C.azul }}>{resPenhora.indice==="ipca"?"Juros de Mora (1% a.m.)":"Juros de Mora (1% a.m. / Taxa Legal)"}</div>
                     <div style={{ fontWeight:700, fontSize:14 }}>{fmt(resPenhora.juros)}</div>
                   </div>
                 </div>
@@ -1880,12 +1966,18 @@ function TabTutorial() {
       </Card>
 
       <Card>
-        <h2 style={h2}>{"Os dois índices de atualização"}</h2>
+        <h2 style={h2}>{"Os três índices de atualização"}</h2>
+        <div style={{ border:"2px solid "+C.verdeClaro, borderRadius:8, padding:14, marginTop:12, background:C.verdePale }}>
+          <div style={{ fontWeight:800, color:C.verde, marginBottom:6 }}>{"Justiça Federal (padrão — pré-selecionado)"}</div>
+          <div style={{ fontSize:12.5, color:"#444", lineHeight:1.7 }}>
+            {"Reproduz a tabela de correção monetária da Justiça Federal (Manual de Cálculos do CJF), já adaptada à Lei 14.905/2024: correção pelo IPCA-E até ago/2024 e pelo IPCA a partir de set/2024 (art. 389 CC); juros de mora simples de 1% ao mês até ago/2024 e, depois, pela Taxa Legal (art. 406, §1º, CC — SELIC do mês anterior deduzido o IPCA-15, nunca negativa, conforme Res. CMN 5.171/2024)."}
+          </div>
+        </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12 }}>
           <div style={{ border:"2px solid "+C.verde, borderRadius:8, padding:14 }}>
             <div style={{ fontWeight:800, color:C.verde, marginBottom:6 }}>{"IPCA-E"}</div>
             <div style={{ fontSize:12.5, color:"#444", lineHeight:1.7 }}>
-              {"Correção monetária pelo IPCA-E (IBGE) acrescida de juros de mora de 1% ao mês (art. 406 CC c/c art. 161, §1º, CTN). O PDF demonstra correção e juros em colunas separadas."}
+              {"Correção monetária pelo IPCA-E (IBGE) acrescida de juros de mora de 1% ao mês (art. 406 CC c/c art. 161, §1º, CTN) em todo o período. O PDF demonstra correção e juros em colunas separadas."}
             </div>
           </div>
           <div style={{ border:"2px solid "+C.azul, borderRadius:8, padding:14 }}>
@@ -1895,7 +1987,7 @@ function TabTutorial() {
             </div>
           </div>
         </div>
-        <p style={p}>{"A escolha aparece em todas as modalidades, no quadro “Índice de Correção e Juros”. Adote o critério fixado pelo juízo da execução ou o entendimento da sua prática."}</p>
+        <p style={p}>{"A escolha aparece em todas as modalidades, no quadro “Índice de Correção e Juros”. A opção Justiça Federal vem pré-selecionada; adote outro critério se assim fixado pelo juízo da execução."}</p>
       </Card>
 
       <Card>
@@ -2077,7 +2169,7 @@ function AppInterno(props) {
     }
   };
 
-  var _ind = useState("ipca"); var indice = _ind[0]; var setIndice = _ind[1];
+  var _ind = useState("jf"); var indice = _ind[0]; var setIndice = _ind[1];
   var _proc = useState(""); var processo = _proc[0]; var setProcesso = _proc[1];
   var _alim = useState(""); var alimentado = _alim[0]; var setAlimentado = _alim[1];
   var _alim2 = useState(""); var alimentante = _alim2[0]; var setAlimentante = _alim2[1];
@@ -2209,7 +2301,7 @@ function AppInterno(props) {
       var justFinal=justificativa.trim();
       if(obsImp){if(justFinal)justFinal+="\n\n";justFinal+=obsImp;}
 
-      var labelIndice=indice==="selic"?"SELIC":"IPCA-E";
+      var labelIndice=indice==="selic"?"SELIC":indice==="ipca"?"IPCA-E":"Tabela da Justiça Federal";
       var res={
         processo:maskProcesso(processo),
         alimentado:capitalizarNome(alimentado),
@@ -2267,7 +2359,7 @@ function AppInterno(props) {
         )}
         {statusIndices === "online" && (
           <div style={{ background:C.verdePale, border:"1px solid "+C.verde, borderRadius:8, padding:"8px 14px", marginBottom:16, fontSize:12, color:C.verde }}>
-            {"✓ Índices oficiais do Banco Central carregados — IPCA-E até "+fmtChaveMes(ultimaChave(IPCA_E))+" · SELIC até "+fmtChaveMes(ultimaChave(SELIC))+" · salário mínimo vigente "+fmt(getSM(new Date().getMonth()+1, new Date().getFullYear()))}
+            {"✓ Índices oficiais do Banco Central carregados — IPCA até "+fmtChaveMes(ultimaChave(IPCA))+" · IPCA-E até "+fmtChaveMes(ultimaChave(IPCA_E))+" · SELIC até "+fmtChaveMes(ultimaChave(SELIC))+" · salário mínimo vigente "+fmt(getSM(new Date().getMonth()+1, new Date().getFullYear()))}
           </div>
         )}
         {statusIndices === "offline" && (
