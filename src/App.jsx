@@ -1025,26 +1025,36 @@ function gerarPDFAtuPenhora(dados, logoData) {
 
 // ===================== GERADOR PDF ATUALIZAÇÃO PRISÃO =====================
 
+// Gera o PDF de atualização por parcelas — usado tanto no rito da prisão civil
+// (resultado.rito ausente ou "prisao") quanto no rito da penhora mês a mês
+// (resultado.rito === "penhora").
 function gerarPDFAtuPrisao(resultado, logoData) {
   var doc = new jsPDF({ orientation:"landscape", unit:"mm", format:"a4" });
   var W=297, mg=12, y=0;
+  var pen = resultado.rito === "penhora";
+  var corTema = pen ? [26,82,118] : [0,69,58];
+  var corFundo = pen ? [232,240,250] : [232,245,238];
+  var ritoTitulo = pen ? "ATUALIZAÇÃO DE DÉBITO — RITO DA PENHORA (MÊS A MÊS)" : "ATUALIZAÇÃO DE DÉBITO — RITO DA PRISÃO CIVIL";
+  var ritoSub = pen ? "Execução de Alimentos — art. 528, §8º, CPC (expropriação)" : "Execução de Alimentos — art. 528, §3º, CPC (prisão civil)";
+  var ritoNome = pen ? "PENHORA" : "PRISÃO CIVIL";
+  var ritoArt = pen ? "art. 528, §8º, CPC" : "art. 528, §3º, CPC";
 
-  doc.setFillColor(0,69,58); doc.rect(0,0,W,28,"F");
+  doc.setFillColor(corTema[0],corTema[1],corTema[2]); doc.rect(0,0,W,28,"F");
   if (logoData) {
     try { var lh=18, lw=Math.min(Math.max(lh*_logoRatio,30),65); doc.addImage(logoData,"PNG",6,5,lw,lh); doc.addImage(logoData,"PNG",W-6-lw,5,lw,lh); } catch(e){}
   }
   doc.setTextColor(255,255,255);
   doc.setFontSize(14); doc.setFont("helvetica","bold");
-  doc.text("ATUALIZAÇÃO DE DÉBITO — RITO DA PRISÃO CIVIL", W/2, 10, {align:"center"});
+  doc.text(ritoTitulo, W/2, 10, {align:"center"});
   doc.setFontSize(9); doc.setFont("helvetica","normal");
-  doc.text("Execução de Alimentos — art. 528, §3º, CPC (prisão civil)", W/2, 16, {align:"center"});
+  doc.text(ritoSub, W/2, 16, {align:"center"});
   doc.setFontSize(7.5);
   doc.text("APIDEP — Associação Piauiense das Defensoras e dos Defensores Públicos", W/2, 22, {align:"center"});
   y = 36;
 
-  doc.setFillColor(232,245,238); doc.rect(mg,y,W-mg*2,32,"F");
-  doc.setDrawColor(0,69,58); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,32);
-  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,7,"F");
+  doc.setFillColor(corFundo[0],corFundo[1],corFundo[2]); doc.rect(mg,y,W-mg*2,32,"F");
+  doc.setDrawColor(corTema[0],corTema[1],corTema[2]); doc.setLineWidth(0.3); doc.rect(mg,y,W-mg*2,32);
+  doc.setFillColor(corTema[0],corTema[1],corTema[2]); doc.rect(mg,y,W-mg*2,7,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
   doc.text("DADOS DO PROCESSO", mg+3, y+5);
   y += 10;
@@ -1070,9 +1080,9 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   y += 12;
 
   if (resultado.justificativa) {
-    doc.setTextColor(0,69,58); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setTextColor(corTema[0],corTema[1],corTema[2]); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
     doc.text("JUSTIFICATIVA / OBSERVAÇÕES", mg, y);
-    y += 5; doc.setDrawColor(0,69,58); doc.line(mg,y,W-mg,y); y+=4;
+    y += 5; doc.setDrawColor(corTema[0],corTema[1],corTema[2]); doc.line(mg,y,W-mg,y); y+=4;
     doc.setTextColor(40,40,40); doc.setFont("helvetica","normal"); doc.setFontSize(8);
     var linhas=doc.splitTextToSize(resultado.justificativa, W-mg*2);
     linhas.forEach(function(l){if(y>185){doc.addPage();y=15;}doc.text(l,mg,y);y+=4.5;});
@@ -1080,9 +1090,9 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   }
 
   if(y>150){doc.addPage();y=15;}
-  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,7,"F");
+  doc.setFillColor(corTema[0],corTema[1],corTema[2]); doc.rect(mg,y,W-mg*2,7,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
-  doc.text("PARCELAS EM ABERTO — RITO DA PRISÃO CIVIL (art. 528, §3º, CPC)", mg+3, y+5);
+  doc.text("PARCELAS EM ABERTO — RITO DA "+ritoNome+" ("+ritoArt+")", mg+3, y+5);
   y += 9;
   var cw=[8,18,20,20,20,18,18,18,20,20,10,18,20];
   var cx=[mg];
@@ -1124,9 +1134,9 @@ function gerarPDFAtuPrisao(resultado, logoData) {
     y+=5.5;
   });
 
-  doc.setFillColor(0,69,58); doc.rect(mg,y,W-mg*2,6,"F");
+  doc.setFillColor(corTema[0],corTema[1],corTema[2]); doc.rect(mg,y,W-mg*2,6,"F");
   doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8);
-  doc.text("TOTAL (PRISÃO CIVIL): "+fmt(resultado.total), W-mg-3, y+4, {align:"right"});
+  doc.text("TOTAL ("+ritoNome+"): "+fmt(resultado.total), W-mg-3, y+4, {align:"right"});
   y+=14;
 
   if(y>175){doc.addPage();y=15;}
@@ -1134,9 +1144,9 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   if (resultado.multaVal > 0 || resultado.honorariosVal > 0) {
     var nExtraR = (resultado.multaVal > 0 ? 6 : 0) + (resultado.honorariosVal > 0 ? 6 : 0);
     var boxHR = 39 + nExtraR;
-    doc.setFillColor(232,245,238); doc.rect(mg,y,bW,boxHR,"F");
-    doc.setDrawColor(0,69,58); doc.setLineWidth(0.3); doc.rect(mg,y,bW,boxHR);
-    doc.setFillColor(0,69,58); doc.rect(mg,y,bW,7,"F");
+    doc.setFillColor(corFundo[0],corFundo[1],corFundo[2]); doc.rect(mg,y,bW,boxHR,"F");
+    doc.setDrawColor(corTema[0],corTema[1],corTema[2]); doc.setLineWidth(0.3); doc.rect(mg,y,bW,boxHR);
+    doc.setFillColor(corTema[0],corTema[1],corTema[2]); doc.rect(mg,y,bW,7,"F");
     doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
     doc.text("COMPOSIÇÃO DO VALOR DA EXECUÇÃO", mg+3, y+5);
     y += 10;
@@ -1156,9 +1166,9 @@ function gerarPDFAtuPrisao(resultado, logoData) {
     lbP("TOTAL FINAL (atualiz. + multa + honorários):", resultado.totalGeral, true);
     y += 6;
   } else {
-    doc.setFillColor(0,69,58); doc.rect(mg,y,bW,18,"F");
+    doc.setFillColor(corTema[0],corTema[1],corTema[2]); doc.rect(mg,y,bW,18,"F");
     doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(9);
-    doc.text("TOTAL — PRISÃO CIVIL — art. 528, §3º, CPC", mg+4, y+7);
+    doc.text("TOTAL — "+ritoNome+" — "+ritoArt, mg+4, y+7);
     doc.setFontSize(14);
     doc.text(fmt(resultado.totalGeral), W-mg-4, y+13, {align:"right"});
     y+=26;
@@ -1176,8 +1186,10 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   var obsP = [
     "1. " + notaCobertura(resultado.indice),
     obsJurosP,
-    "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
-    "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC)."
+    pen
+      ? "3. Todas as parcelas estão no rito da penhora (expropriação) — art. 528, §8º, CPC, atualizadas mês a mês."
+      : "3. Todas as parcelas estão no rito da prisão civil — art. 528, §3º, CPC.",
+    "4. Imputação de pagamentos nos débitos mais antigos (art. 354 CC): cada parcela é corrigida até a data do respectivo pagamento e o valor pago abate primeiro as parcelas mais antigas."
   ];
   obsP.forEach(function(o){
     var ls = doc.splitTextToSize(o, W-mg*2);
@@ -1194,7 +1206,7 @@ function gerarPDFAtuPrisao(resultado, logoData) {
   doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
   if(resultado.lotacao) doc.text(resultado.lotacao, W/2, y, {align:"center"});
 
-  var fn="Atualizacao_Prisao_"+(resultado.processo||"calculo")+"_"+resultado.data.replace(/\//g,"-")+".pdf";
+  var fn=(pen?"Atualizacao_Penhora_MesAMes_":"Atualizacao_Prisao_")+(resultado.processo||"calculo")+"_"+resultado.data.replace(/\//g,"-")+".pdf";
   try {
     var blob=doc.output("blob"); var blobUrl=URL.createObjectURL(blob);
     var link=document.createElement("a"); link.href=blobUrl; link.download=fn;
@@ -1234,6 +1246,7 @@ function TabAtualizacao(props) {
   var _si = useState(false); var showIntervalo = _si[0]; var setShowIntervalo = _si[1];
   var _i13 = useState(ini.incluir13 || false); var incluir13 = _i13[0]; var setIncluir13 = _i13[1];
   var _resPri = useState(null); var resPrisao = _resPri[0]; var setResPrisao = _resPri[1];
+  var _resPenP = useState(null); var resPenhoraParc = _resPenP[0]; var setResPenhoraParc = _resPenP[1];
   var _ld = useState(false); var loading = _ld[0]; var setLoading = _ld[1];
   var _multa = useState(ini.multaPct || ""); var multaPct = _multa[0]; var setMultaPct = _multa[1];
   var _hon = useState(ini.honorariosPct || ""); var honorariosPct = _hon[0]; var setHonorariosPct = _hon[1];
@@ -1348,8 +1361,11 @@ function TabAtualizacao(props) {
     onSalvarHistorico({ id:hIdPen, tipo:"atu-penhora", alimentado: capitalizarNome(alimentado), processo:maskProcesso(processo), data:dataBase, total:totalGeral });
   };
 
-  var calcularPrisao = function(){
-    setLoading(true); setResPrisao(null);
+  // Motor compartilhado do cálculo por parcelas: rito "prisao" (art. 528, §3º)
+  // ou "penhora" mês a mês (art. 528, §8º).
+  var calcularPorParcelas = function(rito){
+    var pen = rito === "penhora";
+    setLoading(true); (pen ? setResPenhoraParc : setResPrisao)(null);
     setTimeout(function(){
       var raw = parcelas
         .filter(function(p){return p.valor&&parseMoney(p.valor)>0;})
@@ -1470,30 +1486,36 @@ function TabAtualizacao(props) {
         defensor:perfil.nome||"",
         lotacao:perfil.lotacao||"",
         obsImputacao:obsImp,
-        creditoRemanescente:creditoExcedente
+        creditoRemanescente:creditoExcedente,
+        rito:rito
       };
-      setResPrisao(res);
+      (pen ? setResPenhoraParc : setResPrisao)(res);
       var hIdPri = Date.now();
-      try { localStorage.setItem("dpe_form_"+hIdPri, JSON.stringify({subModo:"prisao",processo:processo,alimentado:alimentado,alimentante:alimentante,comarca:comarca,indice:indice,justificativa:justificativa,diaVencimento:diaVencimento,tipoAlimento:tipoAlimento,percentualSM:percentualSM,valorFixoAlimento:valorFixoAlimento,parcelas:parcelas,incluir13:incluir13,multaPct:multaPct,honorariosPct:honorariosPct})); } catch(e){}
-      onSalvarHistorico({id:hIdPri,tipo:"atu-prisao",alimentado:capitalizarNome(alimentado),processo:maskProcesso(processo),data:new Date().toLocaleDateString("pt-BR"),total:totalGeralP});
+      try { localStorage.setItem("dpe_form_"+hIdPri, JSON.stringify({subModo:(pen?"penhora-parcelas":"prisao"),processo:processo,alimentado:alimentado,alimentante:alimentante,comarca:comarca,indice:indice,justificativa:justificativa,diaVencimento:diaVencimento,tipoAlimento:tipoAlimento,percentualSM:percentualSM,valorFixoAlimento:valorFixoAlimento,parcelas:parcelas,incluir13:incluir13,multaPct:multaPct,honorariosPct:honorariosPct})); } catch(e){}
+      onSalvarHistorico({id:hIdPri,tipo:(pen?"atu-penhora-parc":"atu-prisao"),alimentado:capitalizarNome(alimentado),processo:maskProcesso(processo),data:new Date().toLocaleDateString("pt-BR"),total:totalGeralP});
       setLoading(false);
     }, 400);
   };
+
+  var ritoParcelas = subModo === "penhora-parcelas" ? "penhora" : "prisao";
+  var corRito = ritoParcelas === "penhora" ? C.azul : C.verde;
+  var resParcelas = ritoParcelas === "penhora" ? resPenhoraParc : resPrisao;
 
   return (
     <div>
       <div style={{ display:"flex", gap:0, marginBottom:20, borderRadius:8, overflow:"hidden", border:"1px solid "+C.borda }}>
         {[
-          ["penhora", "💰 Atualizar — Rito da Penhora", "Valor de referência + correção"],
-          ["prisao", "🔒 Atualizar — Rito da Prisão Civil", "Parcelas vencidas após a distribuição"]
+          ["penhora", "💰 Penhora — Valor Consolidado", "Atualiza o valor total já constante nos autos"],
+          ["penhora-parcelas", "📅 Penhora — Mês a Mês", "Parcela a parcela, com imputação de pagamentos"],
+          ["prisao", "🔒 Prisão Civil", "Parcelas vencidas após a distribuição"]
         ].map(function(item, idx){
           var v=item[0], l=item[1], desc=item[2];
           var ativo=subModo===v;
           return (
             <button key={v} onClick={function(){setSubModo(v);}} style={{
               flex:1, padding:"14px 16px", border:"none",
-              borderRight: idx===0?"1px solid "+C.borda:"none",
-              background: ativo ? (v==="penhora"?C.azul:C.verde) : C.cinzaClaro,
+              borderRight: idx<2?"1px solid "+C.borda:"none",
+              background: ativo ? (v==="prisao"?C.verde:C.azul) : C.cinzaClaro,
               color: ativo ? "#fff" : C.cinza,
               cursor:"pointer", textAlign:"left", touchAction:"manipulation"
             }}>
@@ -1723,10 +1745,15 @@ function TabAtualizacao(props) {
         </div>
       )}
 
-      {subModo === "prisao" && (
+      {(subModo === "prisao" || subModo === "penhora-parcelas") && (
         <div>
+          {subModo === "penhora-parcelas" && (
+            <div style={{ background:"#e8f0f8", border:"1px solid "+C.azul, borderRadius:8, padding:"12px 16px", marginBottom:16, fontSize:13, color:C.azul }}>
+              {"Penhora mês a mês: lance cada parcela devida (rito da penhora — art. 528, §8º, CPC). Cada uma é atualizada individualmente desde o vencimento e os pagamentos informados abatem primeiro os débitos mais antigos, previamente atualizados até a data de cada pagamento (art. 354 CC)."}
+            </div>
+          )}
           <Card>
-            <h3 style={{ margin:"0 0 12px", color:C.verde, fontSize:15 }}>{"Alimentos Fixados"}</h3>
+            <h3 style={{ margin:"0 0 12px", color:corRito, fontSize:15 }}>{"Alimentos Fixados"}</h3>
             <div style={{ display:"flex", gap:10, marginBottom:10 }}>
               {[["sm","% do Salário Mínimo"],["fixo","Valor fixo (R$)"]].map(function(item){
                 var v=item[0],l=item[1];
@@ -1757,8 +1784,8 @@ function TabAtualizacao(props) {
           </Card>
 
           <Card>
-            <h3 style={{ margin:"0 0 4px", color:C.verde, fontSize:15 }}>{"Parcelas em Aberto (todas no Rito da Prisão)"}</h3>
-            <p style={{ fontSize:12, color:"#888", marginTop:0, marginBottom:12 }}>{"Inclua todas as parcelas vencidas após a distribuição da execução que devem ser atualizadas pelo rito da prisão civil."}</p>
+            <h3 style={{ margin:"0 0 4px", color:corRito, fontSize:15 }}>{ritoParcelas==="penhora"?"Parcelas em Aberto (todas no Rito da Penhora)":"Parcelas em Aberto (todas no Rito da Prisão)"}</h3>
+            <p style={{ fontSize:12, color:"#888", marginTop:0, marginBottom:12 }}>{ritoParcelas==="penhora"?"Inclua todas as parcelas do débito que devem ser atualizadas mês a mês pelo rito da penhora.":"Inclua todas as parcelas vencidas após a distribuição da execução que devem ser atualizadas pelo rito da prisão civil."}</p>
             <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginBottom:12 }}>
               <Btn small onClick={function(){
                 if(!showIntervalo){var p2=calcMesFimPadrao();setIntervalo(function(prev){return Object.assign({},prev,{mesFim:p2.mesFim,anoFim:p2.anoFim});});}
@@ -1868,26 +1895,26 @@ function TabAtualizacao(props) {
               </div>
             </div>
 
-            <Btn onClick={calcularPrisao} disabled={loading||parcelas.every(function(p){return !p.valor;})}>
-              {loading?"Calculando...":"Calcular Atualização (Prisão Civil)"}
+            <Btn onClick={function(){calcularPorParcelas(ritoParcelas);}} cor={corRito} disabled={loading||parcelas.every(function(p){return !p.valor;})}>
+              {loading?"Calculando...":(ritoParcelas==="penhora"?"Calcular Atualização (Penhora — Mês a Mês)":"Calcular Atualização (Prisão Civil)")}
             </Btn>
           </Card>
 
-          {resPrisao && (
-            <Card style={{ borderLeft:"4px solid "+C.verde }}>
+          {resParcelas && (
+            <Card style={{ borderLeft:"4px solid "+corRito }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                <h3 style={{ margin:0, color:C.verde }}>{"Resultado — Atualização (Prisão Civil)"}</h3>
-                <Btn onClick={function(){carregarLogo().then(function(ld){gerarPDFAtuPrisao(resPrisao,ld);});}} cor={C.verde}>{"Gerar PDF"}</Btn>
+                <h3 style={{ margin:0, color:corRito }}>{ritoParcelas==="penhora"?"Resultado — Atualização (Penhora — Mês a Mês)":"Resultado — Atualização (Prisão Civil)"}</h3>
+                <Btn onClick={function(){carregarLogo().then(function(ld){gerarPDFAtuPrisao(resParcelas,ld);});}} cor={corRito}>{"Gerar PDF"}</Btn>
               </div>
-              {resPrisao.obsImputacao && (
+              {resParcelas.obsImputacao && (
                 <div style={{ background:"#fff8e1", border:"1px solid #f0c040", borderRadius:8, padding:"12px 16px", marginBottom:12, fontSize:12, color:"#555", lineHeight:1.6 }}>
                   <div style={{ fontWeight:700, color:"#b8860b", marginBottom:4 }}>{"Imputação de Pagamentos (art. 354 CC)"}</div>
-                  {resPrisao.obsImputacao}
+                  {resParcelas.obsImputacao}
                 </div>
               )}
-              <div style={{ background:C.verdePale, border:"1px solid "+C.verde, borderRadius:8, padding:16, marginBottom:12 }}>
-                <div style={{ fontWeight:700, color:C.verde, marginBottom:8 }}>{"Parcelas — Rito da Prisão Civil"}</div>
-                {resPrisao.parcelas.map(function(p,i){
+              <div style={{ background:ritoParcelas==="penhora"?"#e8f0f8":C.verdePale, border:"1px solid "+corRito, borderRadius:8, padding:16, marginBottom:12 }}>
+                <div style={{ fontWeight:700, color:corRito, marginBottom:8 }}>{ritoParcelas==="penhora"?"Parcelas — Rito da Penhora (mês a mês)":"Parcelas — Rito da Prisão Civil"}</div>
+                {resParcelas.parcelas.map(function(p,i){
                   return (
                     <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginTop:4 }}>
                       <span>
@@ -1901,32 +1928,32 @@ function TabAtualizacao(props) {
                   );
                 })}
               </div>
-              {(resPrisao.multaVal > 0 || resPrisao.honorariosVal > 0) && (
+              {(resParcelas.multaVal > 0 || resParcelas.honorariosVal > 0) && (
                 <div style={{ background:"#f5f5f5", border:"1px solid "+C.borda, borderRadius:8, padding:"12px 16px", marginBottom:8 }}>
                   <div style={{ fontWeight:700, color:C.cinza, marginBottom:8, fontSize:13 }}>{"Acréscimos sobre o valor atualizado"}</div>
-                  {resPrisao.multaVal > 0 && (
+                  {resParcelas.multaVal > 0 && (
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:4 }}>
-                      <span>{"Multa por atraso ("+fmtPct(resPrisao.multaPct)+"%)"}</span>
-                      <span style={{ fontWeight:600 }}>{fmt(resPrisao.multaVal)}</span>
+                      <span>{"Multa por atraso ("+fmtPct(resParcelas.multaPct)+"%)"}</span>
+                      <span style={{ fontWeight:600 }}>{fmt(resParcelas.multaVal)}</span>
                     </div>
                   )}
-                  {resPrisao.honorariosVal > 0 && (
+                  {resParcelas.honorariosVal > 0 && (
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
-                      <span>{"Honorários advocatícios ("+fmtPct(resPrisao.honorariosPct)+"%)"}</span>
-                      <span style={{ fontWeight:600 }}>{fmt(resPrisao.honorariosVal)}</span>
+                      <span>{"Honorários advocatícios ("+fmtPct(resParcelas.honorariosPct)+"%)"}</span>
+                      <span style={{ fontWeight:600 }}>{fmt(resParcelas.honorariosVal)}</span>
                     </div>
                   )}
                 </div>
               )}
-              <div style={{ background:C.verde, borderRadius:8, padding:"14px 20px", textAlign:"center" }}>
-                {(resPrisao.multaVal > 0 || resPrisao.honorariosVal > 0) && (
+              <div style={{ background:corRito, borderRadius:8, padding:"14px 20px", textAlign:"center" }}>
+                {(resParcelas.multaVal > 0 || resParcelas.honorariosVal > 0) && (
                   <div style={{ color:"rgba(255,255,255,0.75)", fontSize:13, marginBottom:6 }}>
-                    {"Subtotal atualizado: "+fmt(resPrisao.total)}
+                    {"Subtotal atualizado: "+fmt(resParcelas.total)}
                   </div>
                 )}
-                <div style={{ color:"#fff", fontSize:11, opacity:.8 }}>{"TOTAL DA EXECUÇÃO — PRISÃO CIVIL"}</div>
-                <div style={{ color:"#fff", fontWeight:800, fontSize:22 }}>{fmt(resPrisao.totalGeral)}</div>
-                <div style={{ color:"rgba(255,255,255,0.7)", fontSize:11, marginTop:4 }}>{"Índice: "+resPrisao.indiceLabel}</div>
+                <div style={{ color:"#fff", fontSize:11, opacity:.8 }}>{ritoParcelas==="penhora"?"TOTAL DA EXECUÇÃO — PENHORA (MÊS A MÊS)":"TOTAL DA EXECUÇÃO — PRISÃO CIVIL"}</div>
+                <div style={{ color:"#fff", fontWeight:800, fontSize:22 }}>{fmt(resParcelas.totalGeral)}</div>
+                <div style={{ color:"rgba(255,255,255,0.7)", fontSize:11, marginTop:4 }}>{"Índice: "+resParcelas.indiceLabel}</div>
               </div>
             </Card>
           )}
@@ -2009,14 +2036,17 @@ function TabTutorial() {
 
       <Card>
         <h2 style={h2}>{"Modalidade 2 — Atualização de Débito · Rito da Penhora"}</h2>
+        <p style={p}>{"O rito da penhora (art. 528, §8º, CPC) tem duas formas de cálculo, escolhidas nos botões do topo da aba:"}</p>
         <div style={quando}>
-          <b>{"Quando usar: "}</b>{"quando já existe um valor consolidado nos autos (última atualização judicial, cálculo da contadoria ou da parte contrária) e é preciso apenas trazê-lo a valor presente — típico da fase de expropriação (art. 528, §8º, CPC)."}
+          <b>{"Penhora — Valor Consolidado: "}</b>{"quando já existe um valor total consolidado nos autos (última atualização judicial, cálculo da contadoria ou da parte contrária) e é preciso apenas trazê-lo a valor presente. Informe o Valor de Referência e o mês/ano a que se refere; pagamentos posteriores podem ser cadastrados e são abatidos do saldo corrigido até a data de cada um."}
+        </div>
+        <div style={quando}>
+          <b>{"Penhora — Mês a Mês: "}</b>{"quando se quer demonstrar o débito parcela por parcela (como no memorial completo), mas todo ele no rito da penhora. Cada parcela é atualizada individualmente desde o vencimento e os pagamentos informados são imputados nos débitos mais antigos, previamente atualizados até a data de cada pagamento (art. 354 CC) — a mesma regra de imputação dos demais cálculos."}
         </div>
         <ol style={ol}>
-          <li>{"Na aba Atualização de Débito, mantenha selecionado “Atualizar — Rito da Penhora”;"}</li>
+          <li>{"Escolha a forma (Valor Consolidado ou Mês a Mês) nos botões do topo;"}</li>
           <li>{"Preencha os dados do processo e o índice;"}</li>
-          <li>{"Informe o Valor de Referência e o mês/ano a que ele se refere;"}</li>
-          <li>{"Se o devedor pagou algo depois dessa data, cadastre cada pagamento (botão + Pagamento): o sistema corrige o saldo até a data de cada pagamento, abate o valor e segue corrigindo o restante;"}</li>
+          <li>{"No consolidado: informe valor e data de referência e eventuais pagamentos. No mês a mês: lance as parcelas (individualmente ou por intervalo) com os valores pagos;"}</li>
           <li>{"Se for o caso, aplique Multa por Atraso e/ou Honorários Advocatícios (percentuais sobre o valor atualizado);"}</li>
           <li>{"Calcule e gere o PDF."}</li>
         </ol>
@@ -2028,7 +2058,7 @@ function TabTutorial() {
           <b>{"Quando usar: "}</b>{"para atualizar as parcelas que tramitam pelo rito da prisão civil (art. 528, §3º, CPC) — em regra as vencidas após a distribuição, que continuam vencendo no curso da execução. Todas as parcelas lançadas aqui ficam no mesmo rito."}
         </div>
         <ol style={ol}>
-          <li>{"Na aba Atualização de Débito, selecione “Atualizar — Rito da Prisão Civil”;"}</li>
+          <li>{"Na aba Atualização de Débito, selecione “Prisão Civil”;"}</li>
           <li>{"Preencha os dados do processo, como os alimentos foram fixados e o dia de vencimento;"}</li>
           <li>{"Lance as parcelas (individualmente ou por intervalo) com eventuais pagamentos;"}</li>
           <li>{"Aplique multa/honorários se necessário, calcule e gere o PDF."}</li>
@@ -2144,7 +2174,7 @@ function AppInterno(props) {
     var formStr = localStorage.getItem("dpe_form_"+entrada.id);
     var f = formStr ? JSON.parse(formStr) : (entrada._form || null);
     if (!f) { alert("Este cálculo foi salvo antes da funcionalidade de edição ser adicionada. Faça um novo cálculo para habilitar essa função."); return; }
-    if (f.subModo === "penhora" || f.subModo === "prisao") {
+    if (f.subModo === "penhora" || f.subModo === "prisao" || f.subModo === "penhora-parcelas") {
       setAtuInitial(f);
       setAtuKey(function(k){ return k+1; });
       setTab("atualizar");
@@ -2620,8 +2650,8 @@ function AppInterno(props) {
             {historico.length===0
               ?<p style={{ color:"#888", textAlign:"center", padding:32 }}>{"Nenhum cálculo ainda."}</p>
               :historico.map(function(h){
-                var tipoLabel=h.tipo==="atu-penhora"?"Atualiz. Penhora":h.tipo==="atu-prisao"?"Atualiz. Prisão":"Novo Cálculo";
-                var corTipo=h.tipo==="atu-penhora"?C.azul:C.verde;
+                var tipoLabel=h.tipo==="atu-penhora"?"Atualiz. Penhora (consolidado)":h.tipo==="atu-penhora-parc"?"Atualiz. Penhora (mês a mês)":h.tipo==="atu-prisao"?"Atualiz. Prisão":"Novo Cálculo";
+                var corTipo=(h.tipo==="atu-penhora"||h.tipo==="atu-penhora-parc")?C.azul:C.verde;
                 return (
                   <div key={h.id} style={{ borderBottom:"1px solid "+C.borda, padding:"14px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                     <div>
